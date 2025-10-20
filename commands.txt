@@ -1,0 +1,16 @@
+sui client ptb \
+--assign nft_id @0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef \
+--assign clock @0x6 \
+--split-coins gas "[50000000]" \
+--assign contribution_coin \
+--move-call 0x80415f52f5ae4270efe2e0ba186e01142800382b487c7774029fb63e18dfa052::campaign::create \
+  nft_id \
+  '"https://www.tradeport.xyz/sui/4"' \
+  '"https://walrus.tusky.io/HKH0WbOt35FiqAM1tstAyUk2aVhfSug_lQ0EDMyTUG8"' \
+  100 \
+  '"Popkins NFT #18933"' \
+  '"The most important NFT in the world"' \
+  200000000 \
+  10000000 \
+  contribution_coin.0 \
+  clock

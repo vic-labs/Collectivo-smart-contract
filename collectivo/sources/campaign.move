@@ -108,6 +108,11 @@ public struct NFTActionErrorEvent has copy, drop {
     error_type: NFTActionError,
 }
 
+public struct WalletAddressSetEvent has copy, drop {
+    campaign_id: ID,
+    wallet_address: address,
+}
+
 public fun create(
     nft_id: ID,
     url: String,
@@ -306,11 +311,14 @@ public fun set_nft_status_error(
 
 public fun create_wallet(campaign: &mut Campaign, address: address, _cap: &AdminCap) {
     df::add(&mut campaign.id, b"wallet", address);
+    event::emit(WalletAddressSetEvent {
+        campaign_id: campaign.id.to_inner(),
+        wallet_address: address,
+    });
 }
 
-public fun get_wallet(campaign: &mut Campaign): address {
-    let address: &address = df::borrow(&campaign.id, b"wallet");
-    *address
+public fun get_wallet(campaign: &mut Campaign): &address {
+    df::borrow(&campaign.id, b"wallet")
 }
 
 public fun get_user_contribution(self: &Campaign, user: address): &ContributorInfo {
