@@ -203,6 +203,10 @@ public fun proposal_type(self: &Proposal): &ProposalType {
     &self.proposal_type
 }
 
+public fun new_list_proposal_type(price: u64): ProposalType {
+    ProposalType::List { price }
+}
+
 // fun is_listing_proposal(proposal_type: &ProposalType): bool {
 //     match (proposal_type) {
 //         ProposalType::List { .. } => true,

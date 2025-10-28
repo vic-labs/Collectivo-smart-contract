@@ -46,6 +46,7 @@ public struct NFT has drop, store {
     rank: u64,
     is_purchased: bool,
     is_listed: bool,
+    nft_type: String,
     name: String,
 }
 
@@ -119,6 +120,7 @@ public fun create(
     image_url: String,
     rank: u64,
     name: String,
+    nft_type: String,
     description: String,
     target: u64,
     min_contribution: u64,
@@ -130,7 +132,16 @@ public fun create(
 
     let mut campaign = Campaign {
         id: object::new(ctx),
-        nft: NFT { nft_id, url, image_url, rank, name, is_purchased: false, is_listed: false },
+        nft: NFT {
+            nft_id,
+            url,
+            image_url,
+            rank,
+            name,
+            is_purchased: false,
+            is_listed: false,
+            nft_type,
+        },
         description,
         target,
         min_contribution,

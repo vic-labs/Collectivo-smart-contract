@@ -77,6 +77,7 @@ fun test_create_campaign_below_minimum() {
     let image_url = b"https://test.com/image.jpg".to_string();
     let rank = 100;
     let name = b"Test NFT".to_string();
+    let nft_type = b"Test Type".to_string();
     let description = b"Test campaign description".to_string();
     let target = 1000000000; // 1 SUI
     let min_contribution = 100000000; // 0.1 SUI minimum
@@ -88,6 +89,7 @@ fun test_create_campaign_below_minimum() {
         image_url,
         rank,
         name,
+        nft_type,
         description,
         target,
         min_contribution,
@@ -744,6 +746,7 @@ fun test_nft_purchased_status() {
         let new_image_url = b"https://test.com/purchased-image.jpg".to_string();
         let new_rank = 150;
         let new_name = b"Purchased NFT".to_string();
+        let new_nft_type = b"Purchased Type".to_string();
 
         campaign::set_nft_status(
             &mut campaign,
@@ -754,6 +757,7 @@ fun test_nft_purchased_status() {
             new_url,
             new_rank,
             new_name,
+            new_nft_type,
         );
 
         assert!(campaign.nft_is_purchased(), ENFTNotPurchased);
@@ -784,6 +788,7 @@ fun test_nft_listed_status() {
         let image_url = b"https://test.com/listed-image.jpg".to_string();
         let rank = 200;
         let name = b"Listed NFT".to_string();
+        let nft_type = b"Listed Type".to_string();
 
         campaign::set_nft_status(
             &mut campaign,
@@ -794,6 +799,7 @@ fun test_nft_listed_status() {
             url,
             rank,
             name,
+            nft_type,
         );
 
         assert!(campaign.nft_is_listed(), ENFTNotListed);
@@ -825,6 +831,7 @@ fun test_nft_delisted_status() {
         let image_url = b"https://test.com/image.jpg".to_string();
         let rank = 200;
         let name = b"Test NFT".to_string();
+        let nft_type = b"Test Type".to_string();
 
         campaign::set_nft_status(
             &mut campaign,
@@ -835,6 +842,7 @@ fun test_nft_delisted_status() {
             url,
             rank,
             name,
+            nft_type,
         );
 
         assert!(campaign.nft_is_listed(), ENFTNotListed);
@@ -849,6 +857,7 @@ fun test_nft_delisted_status() {
             url,
             rank,
             name,
+            nft_type,
         );
 
         assert!(!campaign.nft_is_listed(), ENFTStillListed);
@@ -906,6 +915,7 @@ fun create_test_campaign(
     let image_url = b"https://test.com/image.jpg".to_string();
     let rank = 100;
     let name = b"Test NFT".to_string();
+    let nft_type = b"Test Type".to_string();
     let description = b"Test campaign description".to_string();
     let target = 1000000000; // 1 SUI
     let contribution = coin::mint_for_testing<SUI>(500000000, scenario.ctx()); // 0.5 SUI
@@ -916,6 +926,7 @@ fun create_test_campaign(
         image_url,
         rank,
         name,
+        nft_type,
         description,
         target,
         min_contribution,

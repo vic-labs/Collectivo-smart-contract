@@ -4,13 +4,39 @@ sui client ptb \
 --split-coins gas "[50000000]" \
 --assign contribution_coin \
 --move-call 0x80415f52f5ae4270efe2e0ba186e01142800382b487c7774029fb63e18dfa052::campaign::create \
-  nft_id \
-  '"https://www.tradeport.xyz/sui/4"' \
-  '"https://walrus.tusky.io/HKH0WbOt35FiqAM1tstAyUk2aVhfSug_lQ0EDMyTUG8"' \
-  100 \
-  '"Popkins NFT #18933"' \
-  '"The most important NFT in the world"' \
-  200000000 \
-  10000000 \
-  contribution_coin.0 \
-  clock
+nft_id \
+"https://www.tradeport.xyz/sui/4" \
+"https://walrus.tusky.io/HKH0WbOt35FiqAM1tstAyUk2aVhfSug_lQ0EDMyTUG8" \
+100 \
+"Popkins NFT #18933" \
+"The most important NFT in the world" \
+200000000 \
+10000000 \
+contribution_coin.0 \
+clock
+
+
+# === CONTRIBUTE TO A CAMPAIGN ===
+
+sui client ptb \
+--assign campaign @0x99258824ddb7a593c03f5e8227f6f4cb378d0cb0ad68b8ef36f328ffe4b785d7 \
+--assign clock @0x6 \
+--split-coins gas "[150000000]" \
+--assign contribution_coin \
+--move-call 0x80415f52f5ae4270efe2e0ba186e01142800382b487c7774029fb63e18dfa052::campaign::contribute \
+campaign \
+contribution_coin.0 \
+clock
+
+
+# === CREATE A PROPOSAL ===
+
+sui client ptb \
+--assign campaign @0x99258824ddb7a593c03f5e8227f6f4cb378d0cb0ad68b8ef36f328ffe4b785d7 \
+--assign clock @0x6 \
+--move-call 0xc7d3925b941e101a4582e1a743172b613f00f0642ee3ccbf662d006aedabf8e4::proposal::new_list_proposal_type 10000000000 \
+--assign proposal_type \
+--move-call 0xc7d3925b941e101a4582e1a743172b613f00f0642ee3ccbf662d006aedabf8e4::proposal::create \
+campaign \
+proposal_type \
+clock

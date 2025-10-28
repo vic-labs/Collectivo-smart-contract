@@ -830,6 +830,7 @@ fun create_test_campaign(
     let image_url = b"https://test.com/image.jpg".to_string();
     let rank = 100;
     let name = b"Test NFT".to_string();
+    let nft_type = b"Test Type".to_string();
     let description = b"Test campaign description".to_string();
     let target = 1000000000; // 1 SUI
     let contribution = coin::mint_for_testing<SUI>(500000000, scenario.ctx()); // 0.5 SUI
@@ -840,6 +841,7 @@ fun create_test_campaign(
         image_url,
         rank,
         name,
+        nft_type,
         description,
         target,
         min_contribution,
