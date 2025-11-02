@@ -56,7 +56,7 @@ fun test_create_listing_proposal() {
         assert!(proposal.campaign_id() == campaign_id, EWrongCampaignId);
 
         // Check initial approval weight (admin's voting weight)
-        // Admin contributed 1 SUI out of 1 SUI = 100% weight
+        // Admin contributed 1000000000 out of 1000000000 = 100% weight
         assert!(proposal.approvals_weight() == 100, EWrongApprovalWeight);
 
         // Check rejection weight is 0
@@ -740,14 +740,15 @@ fun test_voting_weight_calculation() {
     let mut scenario = test_scenario::begin(admin);
 
     // Create campaign with different contribution amounts
-    create_test_campaign(&mut scenario, admin, 100000000); // Admin: 500000000 (0.5 SUI)
+    create_test_campaign(&mut scenario, admin, 100000000); // Admin: deposits 505000000, after fee: 500000000 (0.5 SUI)
 
     scenario.next_tx(contributor1);
     {
         let mut campaign = scenario.take_shared<Campaign>();
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
-        let contribution = coin::mint_for_testing<SUI>(200000000, scenario.ctx()); // 0.2 SUI
+        // Deposit 202000000 to get 200000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(202000000, scenario.ctx());
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
         test_scenario::return_shared(campaign);
         test_clock.destroy_for_testing();
@@ -758,7 +759,8 @@ fun test_voting_weight_calculation() {
         let mut campaign = scenario.take_shared<Campaign>();
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
-        let contribution = coin::mint_for_testing<SUI>(200000000, scenario.ctx()); // 0.2 SUI
+        // Deposit 202000000 to get 200000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(202000000, scenario.ctx());
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
         test_scenario::return_shared(campaign);
         test_clock.destroy_for_testing();
@@ -769,7 +771,8 @@ fun test_voting_weight_calculation() {
         let mut campaign = scenario.take_shared<Campaign>();
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
-        let contribution = coin::mint_for_testing<SUI>(100000000, scenario.ctx()); // 0.1 SUI (completes to 1 SUI)
+        // Deposit 101000000 to get 100000000 after fee (completes to 1 SUI)
+        let contribution = coin::mint_for_testing<SUI>(101000000, scenario.ctx());
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
         test_scenario::return_shared(campaign);
         test_clock.destroy_for_testing();
@@ -777,7 +780,7 @@ fun test_voting_weight_calculation() {
 
     scenario.next_tx(admin);
 
-    // Create proposal (admin has 50% voting weight)
+    // Create proposal (admin has 50% voting weight: 500000000 / 1000000000)
     {
         let campaign = scenario.take_shared<Campaign>();
         let mut test_clock = clock::create_for_testing(scenario.ctx());
@@ -790,7 +793,7 @@ fun test_voting_weight_calculation() {
 
     scenario.next_tx(contributor1);
 
-    // Contributor1 votes (20% weight)
+    // Contributor1 votes (20% weight: 200000000 * 100 / 1000000000 = 20%)
     {
         let mut proposal = scenario.take_shared<Proposal>();
         let campaign = scenario.take_shared<Campaign>();
@@ -833,7 +836,8 @@ fun create_test_campaign(
     let nft_type = b"Test Type".to_string();
     let description = b"Test campaign description".to_string();
     let target = 1000000000; // 1 SUI
-    let contribution = coin::mint_for_testing<SUI>(500000000, scenario.ctx()); // 0.5 SUI
+    // Deposit 505000000 to get 500000000 after fee
+    let contribution = coin::mint_for_testing<SUI>(505000000, scenario.ctx());
 
     campaign::create(
         nft_id,
@@ -865,7 +869,8 @@ fun create_and_complete_campaign(scenario: &mut test_scenario::Scenario, admin: 
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(250000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(500000000, scenario.ctx()); // 0.5 SUI
+        // Deposit 510100000 to get exactly 505000000 after fee to complete campaign
+        let contribution = coin::mint_for_testing<SUI>(510100000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -881,7 +886,7 @@ fun create_completed_campaign_with_contributors(
     admin: address,
     contributor: address,
 ): ID {
-    create_test_campaign(scenario, admin, 100000000); // Admin contributes 0.5 SUI
+    create_test_campaign(scenario, admin, 100000000); // Admin deposits 505000000, after fee: 500000000
 
     scenario.next_tx(contributor);
 
@@ -892,7 +897,8 @@ fun create_completed_campaign_with_contributors(
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(250000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(500000000, scenario.ctx()); // 0.5 SUI
+        // Deposit 510100000 to get exactly 505000000 after fee to complete campaign
+        let contribution = coin::mint_for_testing<SUI>(510100000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -909,14 +915,15 @@ fun create_completed_campaign_with_multiple_contributors(
     contributor1: address,
     contributor2: address,
 ): ID {
-    create_test_campaign(scenario, admin, 100000000); // Admin contributes 0.5 SUI (50%)
+    create_test_campaign(scenario, admin, 100000000); // Admin deposits 505000000, after fee: 500000000 (50%)
 
     scenario.next_tx(contributor1);
     {
         let mut campaign = scenario.take_shared<Campaign>();
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(250000000000);
-        let contribution = coin::mint_for_testing<SUI>(250000000, scenario.ctx()); // 0.25 SUI (25%)
+        // Deposit 252500000 to get 250000000 after fee (25%)
+        let contribution = coin::mint_for_testing<SUI>(252500000, scenario.ctx());
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
         test_scenario::return_shared(campaign);
         test_clock.destroy_for_testing();
@@ -928,7 +935,8 @@ fun create_completed_campaign_with_multiple_contributors(
         let campaign_id = campaign.id();
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(260000000000);
-        let contribution = coin::mint_for_testing<SUI>(250000000, scenario.ctx()); // 0.25 SUI (25%)
+        // Deposit 252500000 to get 250000000 after fee (25%)
+        let contribution = coin::mint_for_testing<SUI>(252500000, scenario.ctx());
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
         test_scenario::return_shared(campaign);
         test_clock.destroy_for_testing();

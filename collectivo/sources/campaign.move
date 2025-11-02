@@ -1,6 +1,6 @@
 module collectivo::campaign;
 
-use collectivo::collectivo::AdminCap;
+use collectivo::collectivo::{AdminCap, deposit_fee};
 use std::string::String;
 use sui::balance::{Self, Balance};
 use sui::clock::Clock;
@@ -191,7 +191,13 @@ public fun contribute(
 ) {
     assert!(campaign.status == CampaignStatus::Active, EInactiveCampaign);
 
-    let contribution_amount = coin.value();
+    let mut deposit_coin = coin;
+    let deposit_amount = deposit_coin.value();
+    // Fee is 1% of contribution amount, not deposit amount
+    // If deposit = 101, then contribution = 100, fee = 1 (exactly 1% of contribution)
+    let fee_amount = calculate_fee(deposit_amount);
+    let fees = deposit_coin.split(fee_amount, ctx);
+    let contribution_amount = deposit_amount - fee_amount;
     let is_new_contributor = !campaign.contributors.contains(&ctx.sender());
     let total_contributed = campaign.sui_raised.value();
     let user = ctx.sender();
@@ -206,7 +212,6 @@ public fun contribute(
 
     // If the user's deposit for some reason is more than the remaining amount to hit target, then we deposit only the needed amount and return the rest to the user
     if (contribution_amount > campaign.target - total_contributed) {
-        let mut deposit_coin = coin;
         let needed_deposit_coin = deposit_coin.split(campaign.target - total_contributed, ctx);
         let deposit_balance = needed_deposit_coin.into_balance();
         contributor_info.amount = deposit_balance.value();
@@ -216,7 +221,7 @@ public fun contribute(
         // return the rest to the user
         transfer::public_transfer(deposit_coin, user);
     } else {
-        campaign.sui_raised.join(coin.into_balance());
+        campaign.sui_raised.join(deposit_coin.into_balance());
     };
 
     if (is_new_contributor) {
@@ -245,7 +250,9 @@ public fun contribute(
     if (campaign.sui_raised.value() == campaign.target) {
         campaign.status = CampaignStatus::Completed;
         event::emit(CampaignCompletedEvent { campaign_id });
-    }
+    };
+
+    deposit_fee(fees);
 }
 
 #[allow(lint(self_transfer))]
@@ -270,6 +277,7 @@ public fun withdraw(campaign: &mut Campaign, amount: u64, ctx: &mut TxContext) {
         let user_contribution_info = campaign.user_contributions.borrow_mut(user);
         user_contribution_info.amount = user_contribution_info.amount - amount;
     };
+
     event::emit(WithdrawEvent {
         campaign_id,
         amount,
@@ -287,6 +295,7 @@ public fun set_nft_status(
     url: String,
     rank: u64,
     name: String,
+    nft_type: String,
 ) {
     let campaign_id = campaign.id.to_inner();
     let is_purchased = status == NFTStatus::Purchased;
@@ -301,6 +310,7 @@ public fun set_nft_status(
     campaign.nft.url = url;
     campaign.nft.rank = rank;
     campaign.nft.name = name;
+    campaign.nft.nft_type = nft_type;
 
     if (is_purchased) {
         event::emit(NFTPurchasedEvent { campaign_id });
@@ -385,17 +395,22 @@ public(package) fun get_voting_weight(self: &Campaign, user: address): u64 {
     (user_contribution * 100) / self.target
 }
 
-#[test_only]
-public fun create_nft_status_purchased(): NFTStatus {
+fun calculate_fee(deposit_amount: u64): u64 {
+    // Fee is 1% of contribution amount
+    // contribution = deposit * 100/101
+    // fee = deposit - contribution
+    let contribution_amount = (deposit_amount * 100) / 101;
+    deposit_amount - contribution_amount
+}
+
+public fun get_nft_status_purchased(): NFTStatus {
     NFTStatus::Purchased
 }
 
-#[test_only]
-public fun create_nft_status_listed(): NFTStatus {
+public fun get_nft_status_listed(): NFTStatus {
     NFTStatus::Listed
 }
 
-#[test_only]
-public fun create_nft_status_delisted(): NFTStatus {
+public fun get_nft_status_delisted(): NFTStatus {
     NFTStatus::Delisted
 }

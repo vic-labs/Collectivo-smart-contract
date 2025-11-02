@@ -19,6 +19,7 @@ edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
 
 [addresses]
 collectivo = "0x0"
+admin_wallet = "0x439ae2c715ffbe9263f1414944da00209f51ec27686a11102792a9fe8546eeb8"
 
 # Named addresses will be accessible in Move as `@name`. They're also exported:
 # for example, `std = "0x1"` is exported by the Standard Library.

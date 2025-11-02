@@ -104,6 +104,12 @@ public fun create(
 
     transfer::public_share_object(proposal);
     event::emit(ProposalCreatedEvent { proposal_id });
+
+    event::emit(ProposalVotedEvent {
+        proposal_id,
+        voter: proposer,
+        vote_type: VoteType::Approval,
+    })
 }
 
 public fun delete(proposal: Proposal, ctx: &mut TxContext) {
@@ -207,25 +213,14 @@ public fun new_list_proposal_type(price: u64): ProposalType {
     ProposalType::List { price }
 }
 
-// fun is_listing_proposal(proposal_type: &ProposalType): bool {
-//     match (proposal_type) {
-//         ProposalType::List { .. } => true,
-//         _ => false,
-//     }
-// }
-
-#[test_only]
-public fun create_list_proposal_type(price: u64): ProposalType {
-    ProposalType::List { price }
-}
-
-#[test_only]
-public fun create_delist_proposal_type(): ProposalType {
+public fun new_delist_proposal_type(): ProposalType {
     ProposalType::Delist
 }
 
-#[test_only]
-public fun create_vote_approval(): VoteType { VoteType::Approval }
+public fun new_approval_vote_type(): VoteType {
+    VoteType::Approval
+}
 
-#[test_only]
-public fun create_vote_rejection(): VoteType { VoteType::Rejection }
+public fun new_rejection_vote_type(): VoteType {
+    VoteType::Rejection
+}

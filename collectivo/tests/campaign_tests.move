@@ -43,7 +43,7 @@ fun test_create_campaign() {
     {
         let campaign = scenario.take_shared<Campaign>();
 
-        // Check initial sui_raised balance (admin contributed 0.5 SUI during creation)
+        // Check initial sui_raised balance (admin deposited 505000000, after 1% fee = 500000000)
         let sui_raised = campaign.sui_raised().value();
         assert!(sui_raised == 500000000, EWrongInitialBalance);
 
@@ -119,7 +119,8 @@ fun test_successful_contribution() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(300000000, scenario.ctx()); // 0.3 SUI
+        // Deposit 303000000 to get 300000000 after fee (303 * 100/101 = 300)
+        let contribution = coin::mint_for_testing<SUI>(303000000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -127,7 +128,7 @@ fun test_successful_contribution() {
         let user_contribution = campaign.get_user_contribution(contributor);
         assert!(user_contribution.contributor_amount() == 300000000, EWrongUserContribution);
 
-        // Check total sui_raised balance (admin 0.5 SUI + contributor 0.3 SUI = 0.8 SUI)
+        // Check total sui_raised balance (admin 500000000 + contributor 300000000 = 800000000)
         assert!(campaign.sui_raised().value() == 800000000, EWrongSuiRaisedAfterContribution);
 
         // Check contributor is in list
@@ -157,7 +158,8 @@ fun test_multiple_contributions_same_user() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(100000000, scenario.ctx()); // 0.1 SUI
+        // Deposit 101000000 to get 100000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(101000000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -173,15 +175,16 @@ fun test_multiple_contributions_same_user() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(300000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(150000000, scenario.ctx()); // 0.15 SUI
+        // Deposit 151500000 to get 150000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(151500000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
-        // Check accumulated contribution (0.1 + 0.15 = 0.25 SUI)
+        // Check accumulated contribution (100000000 + 150000000 = 250000000)
         let user_contribution = campaign.get_user_contribution(contributor);
         assert!(user_contribution.contributor_amount() == 250000000, EWrongUserContribution);
 
-        // Total should be admin 0.5 + contributor 0.25 = 0.75 SUI
+        // Total should be admin 500000000 + contributor 250000000 = 750000000
         assert!(campaign.sui_raised().value() == 750000000, EWrongSuiRaisedAfterContribution);
 
         // Still 2 contributors (admin + contributor)
@@ -210,7 +213,8 @@ fun test_contribution_below_minimum() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(50000000, scenario.ctx()); // 0.05 SUI (below minimum)
+        // Deposit 50000000 (below minimum after fee)
+        let contribution = coin::mint_for_testing<SUI>(50000000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -231,13 +235,14 @@ fun test_excess_contribution_with_refund() {
 
     scenario.next_tx(contributor);
 
-    // Contributor tries to contribute 0.8 SUI but only 0.5 SUI is needed to complete campaign
+    // Contributor tries to contribute but only 500000000 is needed to complete campaign
     {
         let mut campaign = scenario.take_shared<Campaign>();
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(800000000, scenario.ctx()); // 0.8 SUI
+        // Deposit 808000000 to get 800000000 after fee, but only 500000000 needed
+        let contribution = coin::mint_for_testing<SUI>(808000000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -250,7 +255,7 @@ fun test_excess_contribution_with_refund() {
         // Check exact target amount (1 SUI = 1000000000) 💯
         assert!(campaign.sui_raised().value() == 1000000000, EWrongSuiRaisedAfterContribution);
 
-        // Check contributor's recorded amount is only what was actually deposited (0.5 SUI) 📝
+        // Check contributor's recorded amount is only what was actually deposited (500000000) 📝
         let user_contribution = campaign.get_user_contribution(contributor);
         assert!(
             user_contribution.contributor_amount() == 500000000,
@@ -263,7 +268,7 @@ fun test_excess_contribution_with_refund() {
 
     scenario.next_tx(contributor);
 
-    // Check that contributor received the excess amount back as refund (0.3 SUI) 💰
+    // Check that contributor received the excess amount back as refund 💰
     {
         let refund_coin = scenario.take_from_address<coin::Coin<SUI>>(contributor);
         assert!(refund_coin.value() == 300000000, EWrongRefundAmount);
@@ -290,7 +295,8 @@ fun test_campaign_completion_exact_target() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(500000000, scenario.ctx()); // 0.5 SUI
+        // Deposit 510100000 to get exactly 505000000 after fee (to complete campaign)
+        let contribution = coin::mint_for_testing<SUI>(510100000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -325,7 +331,8 @@ fun test_contribute_after_campaign_completed() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(500000000, scenario.ctx()); // 0.5 SUI
+        // Deposit 510100000 to complete campaign
+        let contribution = coin::mint_for_testing<SUI>(510100000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -341,7 +348,8 @@ fun test_contribute_after_campaign_completed() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(200000000, scenario.ctx()); // 0.2 SUI
+        // Deposit 202000000 to get 200000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(202000000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -370,7 +378,8 @@ fun test_successful_full_withdrawal() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(300000000, scenario.ctx()); // 0.3 SUI
+        // Deposit 303000000 to get 300000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(303000000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -389,7 +398,7 @@ fun test_successful_full_withdrawal() {
         // Check contributor is removed
         assert!(!campaign.is_contributor(contributor), EUserStillInContributors);
 
-        // Check total sui_raised (should be 0.5 SUI from admin only)
+        // Check total sui_raised (should be 500000000 from admin only)
         assert!(campaign.sui_raised().value() == 500000000, EWrongSuiRaisedAfterWithdrawal);
 
         // Check contributors count (should be 1 now, just admin)
@@ -427,7 +436,8 @@ fun test_partial_withdrawal() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(400000000, scenario.ctx()); // 0.4 SUI
+        // Deposit 404000000 to get 400000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(404000000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -450,7 +460,7 @@ fun test_partial_withdrawal() {
             EWrongUserContributionAfterPartialWithdrawal,
         );
 
-        // Check total sui_raised (0.9 SUI - 0.15 SUI = 0.75 SUI)
+        // Check total sui_raised (500000000 + 400000000 - 150000000 = 750000000)
         assert!(campaign.sui_raised().value() == 750000000, EWrongSuiRaisedAfterPartialWithdrawal);
 
         // Check contributor is still in the list
@@ -492,7 +502,8 @@ fun test_withdrawal_exceeds_contribution() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(200000000, scenario.ctx()); // 0.2 SUI
+        // Deposit 202000000 to get 200000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(202000000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -554,7 +565,8 @@ fun test_withdraw_after_campaign_completed() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(300000000, scenario.ctx()); // 0.3 SUI
+        // Deposit 303000000 to get 300000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(303000000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -570,7 +582,8 @@ fun test_withdraw_after_campaign_completed() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(200000000, scenario.ctx()); // 0.2 SUI
+        // Deposit 510100000 to complete campaign
+        let contribution = coin::mint_for_testing<SUI>(510100000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -612,7 +625,8 @@ fun test_delete_campaign_with_refunds() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(200000000, scenario.ctx()); // 0.2 SUI
+        // Deposit 202000000 to get 200000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(202000000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -626,7 +640,8 @@ fun test_delete_campaign_with_refunds() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(100000000, scenario.ctx()); // 0.1 SUI
+        // Deposit 101000000 to get 100000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(101000000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -684,7 +699,8 @@ fun test_delete_completed_campaign() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(200000000000);
 
-        let contribution = coin::mint_for_testing<SUI>(500000000, scenario.ctx()); // 0.5 SUI
+        // Deposit 510100000 to complete campaign
+        let contribution = coin::mint_for_testing<SUI>(510100000, scenario.ctx());
 
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
 
@@ -750,7 +766,7 @@ fun test_nft_purchased_status() {
 
         campaign::set_nft_status(
             &mut campaign,
-            campaign::create_nft_status_purchased(),
+            campaign::get_nft_status_purchased(),
             &admin_cap,
             new_nft_id,
             new_image_url,
@@ -792,7 +808,7 @@ fun test_nft_listed_status() {
 
         campaign::set_nft_status(
             &mut campaign,
-            campaign::create_nft_status_listed(),
+            campaign::get_nft_status_listed(),
             &admin_cap,
             nft_id,
             image_url,
@@ -835,7 +851,7 @@ fun test_nft_delisted_status() {
 
         campaign::set_nft_status(
             &mut campaign,
-            campaign::create_nft_status_listed(),
+            campaign::get_nft_status_listed(),
             &admin_cap,
             nft_id,
             image_url,
@@ -850,7 +866,7 @@ fun test_nft_delisted_status() {
         // Then delist it
         campaign::set_nft_status(
             &mut campaign,
-            campaign::create_nft_status_delisted(),
+            campaign::get_nft_status_delisted(),
             &admin_cap,
             nft_id,
             image_url,
@@ -918,7 +934,8 @@ fun create_test_campaign(
     let nft_type = b"Test Type".to_string();
     let description = b"Test campaign description".to_string();
     let target = 1000000000; // 1 SUI
-    let contribution = coin::mint_for_testing<SUI>(500000000, scenario.ctx()); // 0.5 SUI
+    // Deposit 505000000 to get 500000000 after fee
+    let contribution = coin::mint_for_testing<SUI>(505000000, scenario.ctx());
 
     campaign::create(
         nft_id,
