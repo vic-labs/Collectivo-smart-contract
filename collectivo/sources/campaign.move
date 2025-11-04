@@ -41,7 +41,6 @@ public struct ContributorInfo has drop, store {
 
 public struct NFT has drop, store {
     nft_id: ID,
-    url: String,
     image_url: String,
     rank: u64,
     is_purchased: bool,
@@ -116,7 +115,6 @@ public struct WalletAddressSetEvent has copy, drop {
 
 public fun create(
     nft_id: ID,
-    url: String,
     image_url: String,
     rank: u64,
     name: String,
@@ -134,7 +132,6 @@ public fun create(
         id: object::new(ctx),
         nft: NFT {
             nft_id,
-            url,
             image_url,
             rank,
             name,
@@ -292,7 +289,6 @@ public fun set_nft_status(
     _cap: &AdminCap,
     nft_id: ID,
     image_url: String,
-    url: String,
     rank: u64,
     name: String,
     nft_type: String,
@@ -307,7 +303,6 @@ public fun set_nft_status(
     campaign.nft.is_listed = is_listed;
     campaign.nft.nft_id = nft_id;
     campaign.nft.image_url = image_url;
-    campaign.nft.url = url;
     campaign.nft.rank = rank;
     campaign.nft.name = name;
     campaign.nft.nft_type = nft_type;

@@ -36,7 +36,7 @@ fun test_create_listing_proposal() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(300000000000);
 
-        let proposal_type = proposal::create_list_proposal_type(2000000000); // 2 SUI
+        let proposal_type = proposal::new_list_proposal_type(2000000000); // 2 SUI
 
         proposal::create(&campaign, proposal_type, &test_clock, scenario.ctx());
 
@@ -85,7 +85,7 @@ fun test_create_delisting_proposal() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(300000000000);
 
-        let proposal_type = proposal::create_delist_proposal_type();
+        let proposal_type = proposal::new_delist_proposal_type();
 
         proposal::create(&campaign, proposal_type, &test_clock, scenario.ctx());
 
@@ -98,7 +98,7 @@ fun test_create_delisting_proposal() {
     {
         let proposal = scenario.take_shared<Proposal>();
         assert!(
-            *proposal.proposal_type() == proposal::create_delist_proposal_type(),
+            *proposal.proposal_type() == proposal::new_delist_proposal_type(),
             EWrongProposalType,
         );
 
@@ -123,7 +123,7 @@ fun test_create_proposal_before_campaign_completed() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(300000000000);
 
-        let proposal_type = proposal::create_list_proposal_type(2000000000);
+        let proposal_type = proposal::new_list_proposal_type(2000000000);
 
         // Try to create proposal before campaign is completed - should fail
         proposal::create(&campaign, proposal_type, &test_clock, scenario.ctx());
@@ -157,7 +157,7 @@ fun test_vote_approval() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(300000000000);
 
-        let proposal_type = proposal::create_list_proposal_type(2000000000);
+        let proposal_type = proposal::new_list_proposal_type(2000000000);
 
         proposal::create(&campaign, proposal_type, &test_clock, scenario.ctx());
 
@@ -177,7 +177,7 @@ fun test_vote_approval() {
         proposal::vote(
             &mut proposal,
             &campaign,
-            proposal::create_vote_approval(),
+            proposal::new_approval_vote_type(),
             &test_clock,
             scenario.ctx(),
         );
@@ -219,7 +219,7 @@ fun test_vote_rejection() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(300000000000);
 
-        let proposal_type = proposal::create_list_proposal_type(2000000000);
+        let proposal_type = proposal::new_list_proposal_type(2000000000);
 
         proposal::create(&campaign, proposal_type, &test_clock, scenario.ctx());
 
@@ -239,7 +239,7 @@ fun test_vote_rejection() {
         proposal::vote(
             &mut proposal,
             &campaign,
-            proposal::create_vote_rejection(),
+            proposal::new_rejection_vote_type(),
             &test_clock,
             scenario.ctx(),
         );
@@ -284,7 +284,7 @@ fun test_proposal_passed_at_threshold() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(300000000000);
 
-        let proposal_type = proposal::create_list_proposal_type(2000000000);
+        let proposal_type = proposal::new_list_proposal_type(2000000000);
 
         proposal::create(&campaign, proposal_type, &test_clock, scenario.ctx());
 
@@ -304,7 +304,7 @@ fun test_proposal_passed_at_threshold() {
         proposal::vote(
             &mut proposal,
             &campaign,
-            proposal::create_vote_approval(),
+            proposal::new_approval_vote_type(),
             &test_clock,
             scenario.ctx(),
         );
@@ -343,7 +343,7 @@ fun test_proposal_rejected_at_threshold() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(300000000000);
 
-        let proposal_type = proposal::create_list_proposal_type(2000000000);
+        let proposal_type = proposal::new_list_proposal_type(2000000000);
 
         proposal::create(&campaign, proposal_type, &test_clock, scenario.ctx());
 
@@ -363,7 +363,7 @@ fun test_proposal_rejected_at_threshold() {
         proposal::vote(
             &mut proposal,
             &campaign,
-            proposal::create_vote_rejection(),
+            proposal::new_rejection_vote_type(),
             &test_clock,
             scenario.ctx(),
         );
@@ -388,7 +388,7 @@ fun test_proposal_rejected_at_threshold() {
         proposal::vote(
             &mut proposal,
             &campaign,
-            proposal::create_vote_rejection(),
+            proposal::new_rejection_vote_type(),
             &test_clock,
             scenario.ctx(),
         );
@@ -430,7 +430,7 @@ fun test_double_voting_fails() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(300000000000);
 
-        let proposal_type = proposal::create_list_proposal_type(2000000000);
+        let proposal_type = proposal::new_list_proposal_type(2000000000);
 
         proposal::create(&campaign, proposal_type, &test_clock, scenario.ctx());
 
@@ -450,7 +450,7 @@ fun test_double_voting_fails() {
         proposal::vote(
             &mut proposal,
             &campaign,
-            proposal::create_vote_approval(),
+            proposal::new_approval_vote_type(),
             &test_clock,
             scenario.ctx(),
         );
@@ -486,7 +486,7 @@ fun test_vote_after_proposal_passed() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(300000000000);
 
-        let proposal_type = proposal::create_list_proposal_type(2000000000);
+        let proposal_type = proposal::new_list_proposal_type(2000000000);
 
         proposal::create(&campaign, proposal_type, &test_clock, scenario.ctx());
 
@@ -506,7 +506,7 @@ fun test_vote_after_proposal_passed() {
         proposal::vote(
             &mut proposal,
             &campaign,
-            proposal::create_vote_approval(),
+            proposal::new_approval_vote_type(),
             &test_clock,
             scenario.ctx(),
         );
@@ -528,7 +528,7 @@ fun test_vote_after_proposal_passed() {
         proposal::vote(
             &mut proposal,
             &campaign,
-            proposal::create_vote_approval(),
+            proposal::new_approval_vote_type(),
             &test_clock,
             scenario.ctx(),
         );
@@ -566,7 +566,7 @@ fun test_delete_proposal_with_low_votes() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(300000000000);
 
-        let proposal_type = proposal::create_list_proposal_type(2000000000);
+        let proposal_type = proposal::new_list_proposal_type(2000000000);
 
         proposal::create(&campaign, proposal_type, &test_clock, scenario.ctx());
 
@@ -610,7 +610,7 @@ fun test_delete_proposal_with_high_votes() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(300000000000);
 
-        let proposal_type = proposal::create_list_proposal_type(2000000000);
+        let proposal_type = proposal::new_list_proposal_type(2000000000);
 
         proposal::create(&campaign, proposal_type, &test_clock, scenario.ctx());
 
@@ -630,7 +630,7 @@ fun test_delete_proposal_with_high_votes() {
         proposal::vote(
             &mut proposal,
             &campaign,
-            proposal::create_vote_approval(),
+            proposal::new_approval_vote_type(),
             &test_clock,
             scenario.ctx(),
         );
@@ -673,7 +673,7 @@ fun test_delete_proposal_not_proposer() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(300000000000);
 
-        let proposal_type = proposal::create_list_proposal_type(2000000000);
+        let proposal_type = proposal::new_list_proposal_type(2000000000);
 
         proposal::create(&campaign, proposal_type, &test_clock, scenario.ctx());
 
@@ -709,7 +709,7 @@ fun test_delete_passed_proposal() {
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(300000000000);
 
-        let proposal_type = proposal::create_list_proposal_type(2000000000);
+        let proposal_type = proposal::new_list_proposal_type(2000000000);
 
         proposal::create(&campaign, proposal_type, &test_clock, scenario.ctx());
 
@@ -785,7 +785,7 @@ fun test_voting_weight_calculation() {
         let campaign = scenario.take_shared<Campaign>();
         let mut test_clock = clock::create_for_testing(scenario.ctx());
         test_clock.set_for_testing(300000000000);
-        let proposal_type = proposal::create_list_proposal_type(2000000000);
+        let proposal_type = proposal::new_list_proposal_type(2000000000);
         proposal::create(&campaign, proposal_type, &test_clock, scenario.ctx());
         test_scenario::return_shared(campaign);
         test_clock.destroy_for_testing();
@@ -802,7 +802,7 @@ fun test_voting_weight_calculation() {
         proposal::vote(
             &mut proposal,
             &campaign,
-            proposal::create_vote_approval(),
+            proposal::new_approval_vote_type(),
             &test_clock,
             scenario.ctx(),
         );
@@ -829,7 +829,6 @@ fun create_test_campaign(
     test_clock.set_for_testing(200000000000);
 
     let nft_id = object::id_from_address(@0x1234567890abcdef1234567890abcdef12345678);
-    let url = b"https://test.com/nft".to_string();
     let image_url = b"https://test.com/image.jpg".to_string();
     let rank = 100;
     let name = b"Test NFT".to_string();
@@ -841,7 +840,6 @@ fun create_test_campaign(
 
     campaign::create(
         nft_id,
-        url,
         image_url,
         rank,
         name,

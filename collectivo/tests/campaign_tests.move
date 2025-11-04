@@ -70,10 +70,9 @@ fun test_create_campaign_below_minimum() {
     scenario.next_tx(admin);
 
     let mut test_clock = clock::create_for_testing(scenario.ctx());
-    test_clock.set_for_testing(200000000000);
+    test_clock.set_for_testing(2000000000000);
 
     let nft_id = object::id_from_address(@0x1234567890abcdef1234567890abcdef12345678);
-    let url = b"https://test.com/nft".to_string();
     let image_url = b"https://test.com/image.jpg".to_string();
     let rank = 100;
     let name = b"Test NFT".to_string();
@@ -85,7 +84,6 @@ fun test_create_campaign_below_minimum() {
 
     campaign::create(
         nft_id,
-        url,
         image_url,
         rank,
         name,
@@ -758,7 +756,6 @@ fun test_nft_purchased_status() {
         let admin_cap = scenario.take_from_address<AdminCap>(admin);
 
         let new_nft_id = object::id_from_address(@0xabcdef1234567890abcdef1234567890abcdef12);
-        let new_url = b"https://test.com/purchased-nft".to_string();
         let new_image_url = b"https://test.com/purchased-image.jpg".to_string();
         let new_rank = 150;
         let new_name = b"Purchased NFT".to_string();
@@ -770,7 +767,6 @@ fun test_nft_purchased_status() {
             &admin_cap,
             new_nft_id,
             new_image_url,
-            new_url,
             new_rank,
             new_name,
             new_nft_type,
@@ -800,7 +796,6 @@ fun test_nft_listed_status() {
         let admin_cap = scenario.take_from_address<AdminCap>(admin);
 
         let nft_id = object::id_from_address(@0xabcdef1234567890abcdef1234567890abcdef12);
-        let url = b"https://test.com/listed-nft".to_string();
         let image_url = b"https://test.com/listed-image.jpg".to_string();
         let rank = 200;
         let name = b"Listed NFT".to_string();
@@ -812,7 +807,6 @@ fun test_nft_listed_status() {
             &admin_cap,
             nft_id,
             image_url,
-            url,
             rank,
             name,
             nft_type,
@@ -843,7 +837,6 @@ fun test_nft_delisted_status() {
 
         // First list it
         let nft_id = object::id_from_address(@0xabcdef1234567890abcdef1234567890abcdef12);
-        let url = b"https://test.com/nft".to_string();
         let image_url = b"https://test.com/image.jpg".to_string();
         let rank = 200;
         let name = b"Test NFT".to_string();
@@ -855,7 +848,6 @@ fun test_nft_delisted_status() {
             &admin_cap,
             nft_id,
             image_url,
-            url,
             rank,
             name,
             nft_type,
@@ -870,7 +862,6 @@ fun test_nft_delisted_status() {
             &admin_cap,
             nft_id,
             image_url,
-            url,
             rank,
             name,
             nft_type,
@@ -927,7 +918,6 @@ fun create_test_campaign(
     test_clock.set_for_testing(200000000000);
 
     let nft_id = object::id_from_address(@0x1234567890abcdef1234567890abcdef12345678);
-    let url = b"https://test.com/nft".to_string();
     let image_url = b"https://test.com/image.jpg".to_string();
     let rank = 100;
     let name = b"Test NFT".to_string();
@@ -939,7 +929,6 @@ fun create_test_campaign(
 
     campaign::create(
         nft_id,
-        url,
         image_url,
         rank,
         name,
