@@ -54,6 +54,7 @@ echo ""
 echo -e "${GREEN}📋 SCENARIO 1: Creating Campaign${NC}"
 echo "----------------------------------------"
 switch_address "$ADDRESS1"
+sui client faucet
 merge_coins
 
 # Target: 2 SUI (2000000000 MIST)
@@ -102,7 +103,6 @@ CAMPAIGN_TX_OUTPUT=$(sui client ptb \
     --assign contribution_coin \
     --move-call ${PACKAGE_ID}::campaign::create \
     nft_id \
-    "'https://www.tradeport.xyz/sui/4'" \
     "'${IMAGE_URL}'" \
     ${RANDOM_RANK} \
     "'${NFT_NAME}'" \
@@ -139,6 +139,7 @@ echo "----------------------------------------"
 
 # Address 2 contributes 0.4 SUI (with fee: 0.404 SUI)
 switch_address "$ADDRESS2"
+sui client faucet
 merge_coins
 CONTRIBUTION2_SUI=0.4
 DEPOSIT2_MIST=$(echo "$CONTRIBUTION2_SUI * 1010000000 / 1" | bc)
@@ -159,6 +160,7 @@ wait_for_tx
 
 # Address 3 contributes 0.6 SUI (with fee: 0.606 SUI) - completes campaign
 switch_address "$ADDRESS3"
+sui client faucet
 merge_coins
 CONTRIBUTION3_SUI=0.6
 DEPOSIT3_MIST=$(echo "$CONTRIBUTION3_SUI * 1010000000 / 1" | bc)
@@ -178,12 +180,46 @@ sui client ptb \
 echo -e "${GREEN}✅ Campaign completed!${NC}\n"
 wait_for_tx
 
+# === SCENARIO 2.5: MARK NFT AS PURCHASED ===
+echo -e "${GREEN}📋 SCENARIO 2.5: Marking NFT as Purchased${NC}"
+echo "----------------------------------------"
+switch_address "$ADDRESS3"  # Switch to festive-carnelian (current admin)
+sui client faucet
+merge_coins
+
+    # Use AdminCap from config
+    ADMIN_CAP_ID="${DEVNET_ADMIN_CAP}"
+    echo -e "${YELLOW}Using AdminCap from config: $ADMIN_CAP_ID${NC}"
+
+# Use the same dummy NFT ID as in create for consistency
+PURCHASED_NFT_ID="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+
+    sui client ptb \
+        --assign campaign @${CAMPAIGN_ID} \
+        --assign nft_id @${PURCHASED_NFT_ID} \
+        --move-call ${PACKAGE_ID}::campaign::get_nft_status_purchased \
+        --assign status \
+        --assign admin_cap @${ADMIN_CAP_ID} \
+        --move-call ${PACKAGE_ID}::campaign::set_nft_status \
+        campaign \
+        status \
+        admin_cap \
+        nft_id \
+        "'${IMAGE_URL}'" \
+        ${RANDOM_RANK} \
+        "'${NFT_NAME}'" \
+        ${NFT_TYPE} \
+        --gas-budget 100000000 2>&1 | grep -v "warning\|api version" || true
+
+echo -e "${GREEN}✅ NFT marked as purchased${NC}\n"
+wait_for_tx
+
 # === SCENARIO 3: CREATE PROPOSAL ===
 echo -e "${GREEN}📋 SCENARIO 3: Creating Proposal${NC}"
 echo "----------------------------------------"
 
-# Randomly choose between list and delist
-PROPOSAL_TYPE=$((RANDOM % 2))
+# Always create list proposal for demo purposes
+PROPOSAL_TYPE=0
 
 if [ $PROPOSAL_TYPE -eq 0 ]; then
     # List proposal with random price
@@ -260,6 +296,7 @@ echo "----------------------------------------"
 
 # Address 1 (creator, 50% weight) votes Approval
 switch_address "$ADDRESS1"
+sui client faucet
 merge_coins
 
 if [ -z "$PROPOSAL_ID" ] || [ -z "$CAMPAIGN_ID" ]; then
@@ -286,6 +323,7 @@ wait_for_tx
 
 # Address 2 votes Approval (adds more weight)
 switch_address "$ADDRESS2"
+sui client faucet
 merge_coins
 echo -e "${YELLOW}Address 2 voting: Approval${NC}"
 sui client ptb \
@@ -305,6 +343,7 @@ wait_for_tx
 
 # Address 3 votes Rejection
 switch_address "$ADDRESS3"
+sui client faucet
 merge_coins
 echo -e "${YELLOW}Address 3 voting: Rejection${NC}"
 sui client ptb \
@@ -339,4 +378,3 @@ echo "Total Approvals: ~70% (should pass)"
 echo "Total Rejections: ~30%"
 echo ""
 echo -e "${GREEN}✅ Proposal should have PASSED (65% threshold)${NC}\n"
-

@@ -10,6 +10,7 @@ const EAlreadyVoted: u64 = 2;
 const ENotProposer: u64 = 3;
 const ECannotDeleteAfterMuchVotes: u64 = 4;
 const ECampaignNotCompleted: u64 = 5;
+const NFTNotPurchasedYet: u64 = 6;
 
 const PASS_THRESHOLD: u64 = 65;
 const CAN_DELETE_THRESHOLD: u64 = 50;
@@ -76,6 +77,8 @@ public fun create(
     ctx: &mut TxContext,
 ) {
     assert!(campaign.is_completed(), ECampaignNotCompleted);
+    assert!(campaign.nft_is_purchased(), NFTNotPurchasedYet);
+
     let proposer = ctx.sender();
     let mut voters = vec_set::empty<address>();
     voters.insert(proposer);

@@ -16,6 +16,7 @@ const ECampaignCompleted: u64 = 2;
 const ENotCreator: u64 = 3;
 const ENotContributor: u64 = 4;
 const EAmountGreaterThanContribution: u64 = 5;
+const ERemainingAmountLessThanMinimumContribution: u64 = 6;
 
 public enum CampaignStatus has copy, drop, store {
     Active,
@@ -205,9 +206,10 @@ public fun contribute(
         amount: contribution_amount,
     };
 
-    assert!(contribution_amount >= campaign.min_contribution, EBelowMinimumContribution);
+    if (is_new_contributor) {
+        assert!(contribution_amount >= campaign.min_contribution, EBelowMinimumContribution);
+    };
 
-    // If the user's deposit for some reason is more than the remaining amount to hit target, then we deposit only the needed amount and return the rest to the user
     if (contribution_amount > campaign.target - total_contributed) {
         let needed_deposit_coin = deposit_coin.split(campaign.target - total_contributed, ctx);
         let deposit_balance = needed_deposit_coin.into_balance();
@@ -260,6 +262,7 @@ public fun withdraw(campaign: &mut Campaign, amount: u64, ctx: &mut TxContext) {
     let user_contribution = get_user_contribution(campaign, user);
     assert!(user_contribution.amount > 0, ENotContributor);
     assert!(amount <= user_contribution.amount, EAmountGreaterThanContribution);
+
     let campaign_id = campaign.id.to_inner();
     let is_full_withdrawal = amount == user_contribution.amount;
 
@@ -272,7 +275,14 @@ public fun withdraw(campaign: &mut Campaign, amount: u64, ctx: &mut TxContext) {
         campaign.contributors.remove(index);
     } else {
         let user_contribution_info = campaign.user_contributions.borrow_mut(user);
-        user_contribution_info.amount = user_contribution_info.amount - amount;
+        let remaining_amount_after_withdrawal = user_contribution_info.amount - amount;
+
+        assert!(
+            remaining_amount_after_withdrawal >= campaign.min_contribution,
+            ERemainingAmountLessThanMinimumContribution,
+        );
+
+        user_contribution_info.amount = remaining_amount_after_withdrawal;
     };
 
     event::emit(WithdrawEvent {

@@ -59,7 +59,6 @@ create_campaign() {
         --assign contribution_coin \
         --move-call ${PACKAGE_ID}::campaign::create \
         nft_id \
-        "'https://www.tradeport.xyz/sui/4'" \
         "'${IMAGE_URL}'" \
         ${RANDOM_RANK} \
         "'${NFT_NAME}'" \
@@ -146,25 +145,81 @@ withdraw() {
     fi
 }
 
+mark_purchased() {
+    CAMPAIGN_ID=$1
+
+    if [ -z "$CAMPAIGN_ID" ]; then
+        echo "❌ Please provide campaign ID: ./scripts.sh mark-purchased <campaign_id>"
+        exit 1
+    fi
+
+    # Switch to walrus-deployer address and use admin cap from config
+    echo "🔄 Switching to walrus-deployer address..."
+    sui client switch --address "walrus-deployer"
+    CURRENT_ADDRESS=$(sui client active-address)
+    echo "✅ Active address: $CURRENT_ADDRESS"
+
+    ADMIN_CAP_ID="${DEVNET_ADMIN_CAP}"
+    echo "🔑 Using AdminCap: $ADMIN_CAP_ID"
+    echo "🎨 Marking NFT as purchased for campaign ${CAMPAIGN_ID}..."
+
+    # Use dummy NFT ID (same as in create campaign)
+    PURCHASED_NFT_ID="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+
+    # Get campaign details to extract NFT info
+    CAMPAIGN_DATA=$(sui client object "$CAMPAIGN_ID" --json)
+    IMAGE_URL=$(echo "$CAMPAIGN_DATA" | jq -r '.data.fields.image_url')
+    RANK=$(echo "$CAMPAIGN_DATA" | jq -r '.data.fields.rank')
+    NAME=$(echo "$CAMPAIGN_DATA" | jq -r '.data.fields.name')
+    NFT_TYPE=$(echo "$CAMPAIGN_DATA" | jq -r '.data.fields.nft_type')
+
+    echo "📊 NFT Details:"
+    echo "  Name: $NAME"
+    echo "  Rank: $RANK"
+    echo "  Image: $IMAGE_URL"
+    echo "  Type: $NFT_TYPE"
+
+    if sui client ptb \
+        --assign campaign @${CAMPAIGN_ID} \
+        --assign nft_id @${PURCHASED_NFT_ID} \
+        --move-call ${PACKAGE_ID}::campaign::get_nft_status_purchased \
+        --assign status \
+        --assign admin_cap @${ADMIN_CAP_ID} \
+        --move-call ${PACKAGE_ID}::campaign::set_nft_status \
+        campaign \
+        status \
+        admin_cap \
+        nft_id \
+        "'${IMAGE_URL}'" \
+        ${RANK} \
+        "'${NAME}'" \
+        ${NFT_TYPE}; then
+        echo "✅ NFT marked as purchased!"
+    else
+        echo "❌ Failed to mark NFT as purchased"
+        exit 1
+    fi
+}
+
 create_proposal() {
     CAMPAIGN_ID=$1
-    
+
     if [ -z "$CAMPAIGN_ID" ]; then
         echo "❌ Please provide campaign ID: ./scripts.sh create-proposal <campaign_id>"
         exit 1
     fi
-    
+
     # Randomly choose between list and delist (0 = list, 1 = delist)
     PROPOSAL_TYPE=$((RANDOM % 2))
-    
+
     if [ $PROPOSAL_TYPE -eq 0 ]; then
         # Generate random proposal price (between 1-100 SUI) for list proposal
         RANDOM_PRICE_SUI=$((RANDOM % 100 + 1))
         PRICE_MIST=$(echo "$RANDOM_PRICE_SUI * 1000000000 / 1" | bc)
-        
+
         echo "📋 Creating LIST proposal for campaign ${CAMPAIGN_ID}..."
         echo "💰 Proposal Price: ${RANDOM_PRICE_SUI} SUI (${PRICE_MIST} MIST)"
-        
+
         if sui client ptb \
             --assign campaign @${CAMPAIGN_ID} \
             --assign clock @0x6 \
@@ -181,7 +236,7 @@ create_proposal() {
         fi
     else
         echo "📋 Creating DELIST proposal for campaign ${CAMPAIGN_ID}..."
-        
+
         if sui client ptb \
             --assign campaign @${CAMPAIGN_ID} \
             --assign clock @0x6 \
@@ -209,6 +264,9 @@ case "$1" in
     withdraw)
         withdraw "$2" "$3"
         ;;
+    mark-purchased)
+        mark_purchased "$2"
+        ;;
     create-proposal)
         create_proposal "$2"
         ;;
@@ -217,8 +275,8 @@ case "$1" in
         echo "  ./scripts.sh create-campaign <contribution_amount_in_sui>"
         echo "  ./scripts.sh contribute <campaign_id> <amount_in_sui>"
         echo "  ./scripts.sh withdraw <campaign_id> <amount_in_sui>"
+        echo "  ./scripts.sh mark-purchased <campaign_id>"
         echo "  ./scripts.sh create-proposal <campaign_id>"
         exit 1
         ;;
 esac
-
