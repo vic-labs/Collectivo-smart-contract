@@ -391,6 +391,26 @@ public fun id(self: &Campaign): ID {
     self.id.to_inner()
 }
 
+public fun get_nft_id(self: &Campaign): ID {
+    self.nft.nft_id
+}
+
+public fun get_nft_image_url(self: &Campaign): String {
+    self.nft.image_url
+}
+
+public fun get_nft_rank(self: &Campaign): u64 {
+    self.nft.rank
+}
+
+public fun get_nft_name(self: &Campaign): String {
+    self.nft.name
+}
+
+public fun get_nft_type(self: &Campaign): String {
+    self.nft.nft_type
+}
+
 public(package) fun get_voting_weight(self: &Campaign, user: address): u64 {
     // Get user's contribution weight over 100
     let user_contribution = self.user_contributions.borrow(user).amount;

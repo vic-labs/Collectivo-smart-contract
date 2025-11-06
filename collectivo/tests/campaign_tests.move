@@ -605,6 +605,499 @@ fun test_withdraw_after_campaign_completed() {
     scenario.end();
 }
 
+#[test]
+#[expected_failure(abort_code = collectivo::campaign::ERemainingAmountLessThanMinimumContribution)]
+fun test_partial_withdrawal_below_minimum() {
+    let admin = @0xad;
+    let contributor = @0xc0;
+    let mut scenario = test_scenario::begin(admin);
+
+    create_test_campaign(&mut scenario, admin, 100000000); // 0.1 SUI minimum
+
+    scenario.next_tx(contributor);
+
+    // Contributor contributes exactly the minimum amount
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let mut test_clock = clock::create_for_testing(scenario.ctx());
+        test_clock.set_for_testing(200000000000);
+
+        // Deposit 101000000 to get exactly 100000000 after fee (minimum)
+        let contribution = coin::mint_for_testing<SUI>(101000000, scenario.ctx());
+
+        campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
+
+        test_scenario::return_shared(campaign);
+        test_clock.destroy_for_testing();
+    };
+
+    scenario.next_tx(contributor);
+
+    // Try to withdraw any amount - should fail because remaining would be below minimum
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+
+        // Try to withdraw 50000000 (0.05 SUI) - remaining would be 50000000 < 100000000 minimum
+        campaign::withdraw(&mut campaign, 50000000, scenario.ctx());
+
+        test_scenario::return_shared(campaign);
+    };
+
+    scenario.end();
+}
+
+#[test]
+fun test_additional_contribution_below_minimum_from_existing() {
+    let admin = @0xad;
+    let contributor = @0xc0;
+    let mut scenario = test_scenario::begin(admin);
+
+    create_test_campaign(&mut scenario, admin, 100000000); // 0.1 SUI minimum
+
+    scenario.next_tx(contributor);
+
+    // First contribution (meets minimum)
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let mut test_clock = clock::create_for_testing(scenario.ctx());
+        test_clock.set_for_testing(200000000000);
+
+        // Deposit 101000000 to get 100000000 after fee (meets minimum)
+        let contribution = coin::mint_for_testing<SUI>(101000000, scenario.ctx());
+
+        campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
+
+        test_scenario::return_shared(campaign);
+        test_clock.destroy_for_testing();
+    };
+
+    scenario.next_tx(contributor);
+
+    // Second contribution below minimum (should succeed since existing contributor)
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let mut test_clock = clock::create_for_testing(scenario.ctx());
+        test_clock.set_for_testing(300000000000);
+
+        // Deposit 50500000 to get 50000000 after fee (below minimum but existing contributor)
+        let contribution = coin::mint_for_testing<SUI>(50500000, scenario.ctx());
+
+        campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
+
+        // Check total contribution (100000000 + 50000000 = 150000000)
+        let user_contribution = campaign.get_user_contribution(contributor);
+        assert!(user_contribution.contributor_amount() == 150000000, EWrongUserContribution);
+
+        // Total sui_raised should be admin 500000000 + contributor 150000000 = 650000000
+        assert!(campaign.sui_raised().value() == 650000000, EWrongSuiRaisedAfterContribution);
+
+        test_scenario::return_shared(campaign);
+        test_clock.destroy_for_testing();
+    };
+
+    scenario.end();
+}
+
+#[test]
+fun test_full_withdrawal_from_existing_contributor() {
+    let admin = @0xad;
+    let contributor = @0xc0;
+    let mut scenario = test_scenario::begin(admin);
+
+    create_test_campaign(&mut scenario, admin, 100000000); // 0.1 SUI minimum
+
+    scenario.next_tx(contributor);
+
+    // Contributor makes initial contribution
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let mut test_clock = clock::create_for_testing(scenario.ctx());
+        test_clock.set_for_testing(200000000000);
+
+        // Deposit 202000000 to get 200000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(202000000, scenario.ctx());
+
+        campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
+
+        test_scenario::return_shared(campaign);
+        test_clock.destroy_for_testing();
+    };
+
+    scenario.next_tx(contributor);
+
+    // Additional small contribution
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let mut test_clock = clock::create_for_testing(scenario.ctx());
+        test_clock.set_for_testing(300000000000);
+
+        // Deposit 50500000 to get 50000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(50500000, scenario.ctx());
+
+        campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
+
+        // Total contribution should be 250000000
+        let user_contribution = campaign.get_user_contribution(contributor);
+        assert!(user_contribution.contributor_amount() == 250000000, EWrongUserContribution);
+
+        test_scenario::return_shared(campaign);
+        test_clock.destroy_for_testing();
+    };
+
+    scenario.next_tx(contributor);
+
+    // Full withdrawal
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+
+        campaign::withdraw(&mut campaign, 250000000, scenario.ctx()); // Withdraw full amount
+
+        // Contributor should be removed from list
+        assert!(!campaign.is_contributor(contributor), EUserStillInContributors);
+
+        // Total sui_raised should be back to admin's 500000000
+        assert!(campaign.sui_raised().value() == 500000000, EWrongSuiRaisedAfterWithdrawal);
+
+        // Contributors count should be 1 (just admin)
+        assert!(campaign.contributors_count() == 1, EWrongContributorsCount);
+
+        test_scenario::return_shared(campaign);
+    };
+
+    scenario.next_tx(contributor);
+
+    // Check full amount was returned
+    {
+        let returned_coin = scenario.take_from_address<coin::Coin<SUI>>(contributor);
+        assert!(returned_coin.value() == 250000000, EWrongCoinValue);
+        scenario.return_to_sender(returned_coin);
+    };
+
+    scenario.end();
+}
+
+#[test]
+fun test_multiple_partial_withdrawals_maintaining_minimum() {
+    let admin = @0xad;
+    let contributor = @0xc0;
+    let mut scenario = test_scenario::begin(admin);
+
+    create_test_campaign_with_target(&mut scenario, admin, 100000000, 2000000000); // 2 SUI target
+
+    scenario.next_tx(contributor);
+
+    // Contributor makes large contribution
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let mut test_clock = clock::create_for_testing(scenario.ctx());
+        test_clock.set_for_testing(200000000000);
+
+        // Deposit 707000000 to get 700000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(707000000, scenario.ctx());
+
+        campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
+
+        test_scenario::return_shared(campaign);
+        test_clock.destroy_for_testing();
+    };
+
+    // First partial withdrawal (leave above minimum)
+    scenario.next_tx(contributor);
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+
+        campaign::withdraw(&mut campaign, 300000000, scenario.ctx()); // Withdraw 0.3 SUI, leave 400000000
+
+        let user_contribution = campaign.get_user_contribution(contributor);
+        assert!(user_contribution.contributor_amount() == 400000000, EWrongUserContributionAfterPartialWithdrawal);
+
+        assert!(campaign.sui_raised().value() == 900000000, EWrongSuiRaisedAfterPartialWithdrawal);
+        assert!(campaign.is_contributor(contributor), EUserNotInContributors);
+        assert!(campaign.contributors_count() == 2, EWrongContributorsCount);
+
+        test_scenario::return_shared(campaign);
+    };
+
+    // Second partial withdrawal (still above minimum)
+    scenario.next_tx(contributor);
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+
+        campaign::withdraw(&mut campaign, 200000000, scenario.ctx()); // Withdraw 0.2 SUI, leave 200000000
+
+        let user_contribution = campaign.get_user_contribution(contributor);
+        assert!(user_contribution.contributor_amount() == 200000000, EWrongUserContributionAfterPartialWithdrawal);
+
+        assert!(campaign.sui_raised().value() == 700000000, EWrongSuiRaisedAfterPartialWithdrawal);
+        assert!(campaign.is_contributor(contributor), EUserNotInContributors);
+        assert!(campaign.contributors_count() == 2, EWrongContributorsCount);
+
+        test_scenario::return_shared(campaign);
+    };
+
+    // Third partial withdrawal (exactly at minimum - should succeed)
+    scenario.next_tx(contributor);
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+
+        campaign::withdraw(&mut campaign, 100000000, scenario.ctx()); // Withdraw 0.1 SUI, leave 100000000 (minimum)
+
+        let user_contribution = campaign.get_user_contribution(contributor);
+        assert!(user_contribution.contributor_amount() == 100000000, EWrongUserContributionAfterPartialWithdrawal);
+
+        assert!(campaign.sui_raised().value() == 600000000, EWrongSuiRaisedAfterPartialWithdrawal);
+        assert!(campaign.is_contributor(contributor), EUserNotInContributors);
+        assert!(campaign.contributors_count() == 2, EWrongContributorsCount);
+
+        test_scenario::return_shared(campaign);
+    };
+
+    scenario.end();
+}
+
+#[test]
+#[expected_failure(abort_code = collectivo::campaign::ERemainingAmountLessThanMinimumContribution)]
+fun test_withdrawal_below_minimum_after_multiple_withdrawals() {
+    let admin = @0xad;
+    let contributor = @0xc0;
+    let mut scenario = test_scenario::begin(admin);
+
+    create_test_campaign_with_target(&mut scenario, admin, 100000000, 2000000000); // 2 SUI target
+
+    scenario.next_tx(contributor);
+
+    // Contributor makes large contribution
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let mut test_clock = clock::create_for_testing(scenario.ctx());
+        test_clock.set_for_testing(200000000000);
+
+        // Deposit 707000000 to get 700000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(707000000, scenario.ctx());
+
+        campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
+
+        test_scenario::return_shared(campaign);
+        test_clock.destroy_for_testing();
+    };
+
+    // First three partial withdrawals to reach exactly minimum
+    scenario.next_tx(contributor);
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        campaign::withdraw(&mut campaign, 300000000, scenario.ctx());
+        test_scenario::return_shared(campaign);
+    };
+
+    scenario.next_tx(contributor);
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        campaign::withdraw(&mut campaign, 200000000, scenario.ctx());
+        test_scenario::return_shared(campaign);
+    };
+
+    scenario.next_tx(contributor);
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        campaign::withdraw(&mut campaign, 100000000, scenario.ctx());
+        test_scenario::return_shared(campaign);
+    };
+
+    // Now try to withdraw more than remaining minimum - should fail
+    scenario.next_tx(contributor);
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+
+        // Try to withdraw 15000000 (0.015 SUI) when only 100000000 (0.1 SUI) remains
+        // This would leave 85000000 < 100000000 minimum
+        campaign::withdraw(&mut campaign, 15000000, scenario.ctx());
+
+        test_scenario::return_shared(campaign);
+    };
+
+    scenario.end();
+}
+
+#[test]
+fun test_partial_withdrawal_leaving_exactly_minimum() {
+    let admin = @0xad;
+    let contributor = @0xc0;
+    let mut scenario = test_scenario::begin(admin);
+
+    create_test_campaign(&mut scenario, admin, 100000000); // 0.1 SUI minimum
+
+    scenario.next_tx(contributor);
+
+    // Contributor contributes
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let mut test_clock = clock::create_for_testing(scenario.ctx());
+        test_clock.set_for_testing(200000000000);
+
+        // Deposit 404000000 to get 400000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(404000000, scenario.ctx());
+
+        campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
+
+        test_scenario::return_shared(campaign);
+        test_clock.destroy_for_testing();
+    };
+
+    scenario.next_tx(contributor);
+
+    // Contributor withdraws partial amount leaving exactly minimum
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+
+        // Withdraw 300000000 (0.3 SUI) leaving 100000000 (0.1 SUI) exactly minimum
+        campaign::withdraw(&mut campaign, 300000000, scenario.ctx());
+
+        // Check contributor's remaining balance
+        let user_contribution = campaign.get_user_contribution(contributor);
+        assert!(
+            user_contribution.contributor_amount() == 100000000,
+            EWrongUserContributionAfterPartialWithdrawal,
+        );
+
+        test_scenario::return_shared(campaign);
+    };
+
+    scenario.end();
+}
+
+#[test]
+fun test_additional_contribution_exactly_minimum_from_existing() {
+    let admin = @0xad;
+    let contributor = @0xc0;
+    let mut scenario = test_scenario::begin(admin);
+
+    create_test_campaign(&mut scenario, admin, 100000000); // 0.1 SUI minimum
+
+    scenario.next_tx(contributor);
+
+    // Contributor makes initial contribution
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let mut test_clock = clock::create_for_testing(scenario.ctx());
+        test_clock.set_for_testing(200000000000);
+
+        // Deposit 202000000 to get 200000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(202000000, scenario.ctx());
+
+        campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
+
+        test_scenario::return_shared(campaign);
+        test_clock.destroy_for_testing();
+    };
+
+    scenario.next_tx(contributor);
+
+    // Contributor adds exactly minimum contribution
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let mut test_clock = clock::create_for_testing(scenario.ctx());
+        test_clock.set_for_testing(300000000000);
+
+        // Deposit 101000000 to get exactly 100000000 after fee (minimum)
+        let contribution = coin::mint_for_testing<SUI>(101000000, scenario.ctx());
+
+        campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
+
+        // Check accumulated contribution (200000000 + 100000000 = 300000000)
+        let user_contribution = campaign.get_user_contribution(contributor);
+        assert!(user_contribution.contributor_amount() == 300000000, EWrongUserContribution);
+
+        test_scenario::return_shared(campaign);
+        test_clock.destroy_for_testing();
+    };
+
+    scenario.end();
+}
+
+#[test]
+fun test_withdrawal_of_remaining_after_partial() {
+    let admin = @0xad;
+    let contributor = @0xc0;
+    let mut scenario = test_scenario::begin(admin);
+
+    create_test_campaign(&mut scenario, admin, 100000000); // 0.1 SUI minimum
+
+    scenario.next_tx(contributor);
+
+    // Contributor contributes
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let mut test_clock = clock::create_for_testing(scenario.ctx());
+        test_clock.set_for_testing(200000000000);
+
+        // Deposit 404000000 to get 400000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(404000000, scenario.ctx());
+
+        campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
+
+        test_scenario::return_shared(campaign);
+        test_clock.destroy_for_testing();
+    };
+
+    scenario.next_tx(contributor);
+
+    // Contributor withdraws partial amount
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+
+        // Withdraw 200000000 (0.2 SUI) leaving 200000000 (0.2 SUI)
+        campaign::withdraw(&mut campaign, 200000000, scenario.ctx());
+
+        test_scenario::return_shared(campaign);
+    };
+
+    scenario.next_tx(contributor);
+
+    // Contributor withdraws remaining amount (full withdrawal)
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+
+        // Withdraw remaining 200000000
+        campaign::withdraw(&mut campaign, 200000000, scenario.ctx());
+
+        // Check contributor is removed
+        assert!(!campaign.is_contributor(contributor), EUserStillInContributors);
+
+        test_scenario::return_shared(campaign);
+    };
+
+    scenario.end();
+}
+
+#[test]
+#[expected_failure(abort_code = collectivo::campaign::EBelowMinimumContribution)]
+fun test_new_contributor_cannot_contribute_below_minimum() {
+    let admin = @0xad;
+    let new_contributor = @0xc1;
+    let mut scenario = test_scenario::begin(admin);
+
+    create_test_campaign(&mut scenario, admin, 100000000); // 0.1 SUI minimum
+
+    scenario.next_tx(new_contributor);
+
+    // New contributor tries to contribute below minimum - should fail
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let mut test_clock = clock::create_for_testing(scenario.ctx());
+        test_clock.set_for_testing(200000000000);
+
+        // Deposit 50000000 to get 49504950 after fee (below minimum)
+        let contribution = coin::mint_for_testing<SUI>(50000000, scenario.ctx());
+
+        campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
+
+        test_scenario::return_shared(campaign);
+        test_clock.destroy_for_testing();
+    };
+
+    scenario.end();
+}
+
 // === CAMPAIGN DELETION TESTS === //
 
 #[test]
@@ -912,6 +1405,15 @@ fun create_test_campaign(
     admin: address,
     min_contribution: u64,
 ) {
+    create_test_campaign_with_target(scenario, admin, min_contribution, 1000000000);
+}
+
+fun create_test_campaign_with_target(
+    scenario: &mut test_scenario::Scenario,
+    admin: address,
+    min_contribution: u64,
+    target: u64,
+) {
     scenario.next_tx(admin);
 
     let mut test_clock = clock::create_for_testing(scenario.ctx());
@@ -923,7 +1425,6 @@ fun create_test_campaign(
     let name = b"Test NFT".to_string();
     let nft_type = b"Test Type".to_string();
     let description = b"Test campaign description".to_string();
-    let target = 1000000000; // 1 SUI
     // Deposit 505000000 to get 500000000 after fee
     let contribution = coin::mint_for_testing<SUI>(505000000, scenario.ctx());
 

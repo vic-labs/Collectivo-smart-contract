@@ -2,6 +2,7 @@
 module collectivo::proposal_tests;
 
 use collectivo::campaign::{Self, Campaign};
+use collectivo::collectivo::issue_admin_cap;
 use collectivo::proposal::{Self, Proposal};
 use sui::clock;
 use sui::coin;
@@ -739,6 +740,7 @@ fun test_voting_weight_calculation() {
     let contributor3 = @0xc3;
     let mut scenario = test_scenario::begin(admin);
 
+    issue_admin_cap(scenario.ctx());
     // Create campaign with different contribution amounts
     create_test_campaign(&mut scenario, admin, 100000000); // Admin: deposits 505000000, after fee: 500000000 (0.5 SUI)
 
@@ -776,6 +778,33 @@ fun test_voting_weight_calculation() {
         campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
         test_scenario::return_shared(campaign);
         test_clock.destroy_for_testing();
+    };
+
+    // Set NFT status to purchased
+    scenario.next_tx(admin);
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let admin_cap = scenario.take_from_address<collectivo::collectivo::AdminCap>(admin);
+
+        let nft_id = campaign::get_nft_id(&campaign);
+        let image_url = campaign::get_nft_image_url(&campaign);
+        let rank = campaign::get_nft_rank(&campaign);
+        let name = campaign::get_nft_name(&campaign);
+        let nft_type = campaign::get_nft_type(&campaign);
+
+        campaign::set_nft_status(
+            &mut campaign,
+            campaign::get_nft_status_purchased(),
+            &admin_cap,
+            nft_id,
+            image_url,
+            rank,
+            name,
+            nft_type,
+        );
+
+        scenario.return_to_sender(admin_cap);
+        test_scenario::return_shared(campaign);
     };
 
     scenario.next_tx(admin);
@@ -856,12 +885,13 @@ fun create_test_campaign(
 }
 
 fun create_and_complete_campaign(scenario: &mut test_scenario::Scenario, admin: address): ID {
+    issue_admin_cap(scenario.ctx());
     create_test_campaign(scenario, admin, 100000000);
 
     scenario.next_tx(admin);
 
     // Complete campaign by admin contributing more
-    {
+    let campaign_id = {
         let mut campaign = scenario.take_shared<Campaign>();
         let campaign_id = campaign.id();
         let mut test_clock = clock::create_for_testing(scenario.ctx());
@@ -876,7 +906,36 @@ fun create_and_complete_campaign(scenario: &mut test_scenario::Scenario, admin: 
         test_clock.destroy_for_testing();
 
         campaign_id
-    }
+    };
+
+    // Set NFT status to purchased
+    scenario.next_tx(admin);
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let admin_cap = scenario.take_from_address<collectivo::collectivo::AdminCap>(admin);
+
+        let nft_id = campaign::get_nft_id(&campaign);
+        let image_url = campaign::get_nft_image_url(&campaign);
+        let rank = campaign::get_nft_rank(&campaign);
+        let name = campaign::get_nft_name(&campaign);
+        let nft_type = campaign::get_nft_type(&campaign);
+
+        campaign::set_nft_status(
+            &mut campaign,
+            campaign::get_nft_status_purchased(),
+            &admin_cap,
+            nft_id,
+            image_url,
+            rank,
+            name,
+            nft_type,
+        );
+
+        scenario.return_to_sender(admin_cap);
+        test_scenario::return_shared(campaign);
+    };
+
+    campaign_id
 }
 
 fun create_completed_campaign_with_contributors(
@@ -884,12 +943,13 @@ fun create_completed_campaign_with_contributors(
     admin: address,
     contributor: address,
 ): ID {
+    issue_admin_cap(scenario.ctx());
     create_test_campaign(scenario, admin, 100000000); // Admin deposits 505000000, after fee: 500000000
 
     scenario.next_tx(contributor);
 
     // Contributor completes campaign
-    {
+    let campaign_id = {
         let mut campaign = scenario.take_shared<Campaign>();
         let campaign_id = campaign.id();
         let mut test_clock = clock::create_for_testing(scenario.ctx());
@@ -904,7 +964,36 @@ fun create_completed_campaign_with_contributors(
         test_clock.destroy_for_testing();
 
         campaign_id
-    }
+    };
+
+    // Set NFT status to purchased
+    scenario.next_tx(admin);
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let admin_cap = scenario.take_from_address<collectivo::collectivo::AdminCap>(admin);
+
+        let nft_id = campaign::get_nft_id(&campaign);
+        let image_url = campaign::get_nft_image_url(&campaign);
+        let rank = campaign::get_nft_rank(&campaign);
+        let name = campaign::get_nft_name(&campaign);
+        let nft_type = campaign::get_nft_type(&campaign);
+
+        campaign::set_nft_status(
+            &mut campaign,
+            campaign::get_nft_status_purchased(),
+            &admin_cap,
+            nft_id,
+            image_url,
+            rank,
+            name,
+            nft_type,
+        );
+
+        scenario.return_to_sender(admin_cap);
+        test_scenario::return_shared(campaign);
+    };
+
+    campaign_id
 }
 
 fun create_completed_campaign_with_multiple_contributors(
@@ -913,6 +1002,7 @@ fun create_completed_campaign_with_multiple_contributors(
     contributor1: address,
     contributor2: address,
 ): ID {
+    issue_admin_cap(scenario.ctx());
     create_test_campaign(scenario, admin, 100000000); // Admin deposits 505000000, after fee: 500000000 (50%)
 
     scenario.next_tx(contributor1);
@@ -928,7 +1018,7 @@ fun create_completed_campaign_with_multiple_contributors(
     };
 
     scenario.next_tx(contributor2);
-    {
+    let campaign_id = {
         let mut campaign = scenario.take_shared<Campaign>();
         let campaign_id = campaign.id();
         let mut test_clock = clock::create_for_testing(scenario.ctx());
@@ -939,5 +1029,34 @@ fun create_completed_campaign_with_multiple_contributors(
         test_scenario::return_shared(campaign);
         test_clock.destroy_for_testing();
         campaign_id
-    }
+    };
+
+    // Set NFT status to purchased
+    scenario.next_tx(admin);
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let admin_cap = scenario.take_from_address<collectivo::collectivo::AdminCap>(admin);
+
+        let nft_id = campaign::get_nft_id(&campaign);
+        let image_url = campaign::get_nft_image_url(&campaign);
+        let rank = campaign::get_nft_rank(&campaign);
+        let name = campaign::get_nft_name(&campaign);
+        let nft_type = campaign::get_nft_type(&campaign);
+
+        campaign::set_nft_status(
+            &mut campaign,
+            campaign::get_nft_status_purchased(),
+            &admin_cap,
+            nft_id,
+            image_url,
+            rank,
+            name,
+            nft_type,
+        );
+
+        scenario.return_to_sender(admin_cap);
+        test_scenario::return_shared(campaign);
+    };
+
+    campaign_id
 }
