@@ -794,7 +794,7 @@ fun test_voting_weight_calculation() {
 
         campaign::set_nft_status(
             &mut campaign,
-            campaign::get_nft_status_purchased(),
+            0u8,
             &admin_cap,
             nft_id,
             image_url,
@@ -922,7 +922,7 @@ fun create_and_complete_campaign(scenario: &mut test_scenario::Scenario, admin: 
 
         campaign::set_nft_status(
             &mut campaign,
-            campaign::get_nft_status_purchased(),
+            0u8,
             &admin_cap,
             nft_id,
             image_url,
@@ -980,7 +980,7 @@ fun create_completed_campaign_with_contributors(
 
         campaign::set_nft_status(
             &mut campaign,
-            campaign::get_nft_status_purchased(),
+            0u8,
             &admin_cap,
             nft_id,
             image_url,
@@ -1045,7 +1045,7 @@ fun create_completed_campaign_with_multiple_contributors(
 
         campaign::set_nft_status(
             &mut campaign,
-            campaign::get_nft_status_purchased(),
+            0u8,
             &admin_cap,
             nft_id,
             image_url,

@@ -107,6 +107,7 @@ public struct NFTDelistedEvent has copy, drop {
 public struct NFTActionErrorEvent has copy, drop {
     campaign_id: ID,
     error_type: NFTActionError,
+    error_message: String,
 }
 
 public struct WalletAddressSetEvent has copy, drop {
@@ -162,8 +163,16 @@ public fun create(
 public fun delete(campaign: Campaign, ctx: &mut TxContext) {
     assert!(!(campaign.status == CampaignStatus::Completed), ECampaignCompleted);
     assert!(campaign.creator == ctx.sender(), ENotCreator);
-    let campaign_id = campaign.id.to_inner();
 
+    delete_and_refund(campaign, ctx);
+}
+
+entry fun admin_delete(campaign: Campaign, _cap: &AdminCap, ctx: &mut TxContext) {
+    delete_and_refund(campaign, ctx);
+}
+
+fun delete_and_refund(campaign: Campaign, ctx: &mut TxContext) {
+    let campaign_id = campaign.id.to_inner();
     let Campaign { id, user_contributions, mut sui_raised, mut contributors, .. } = campaign;
     // refund all contributors
     while (sui_raised.value() > 0) {
@@ -293,9 +302,9 @@ public fun withdraw(campaign: &mut Campaign, amount: u64, ctx: &mut TxContext) {
     });
 }
 
-public fun set_nft_status(
+entry fun set_nft_status(
     campaign: &mut Campaign,
-    status: NFTStatus,
+    status_code: u8,
     _cap: &AdminCap,
     nft_id: ID,
     image_url: String,
@@ -304,6 +313,13 @@ public fun set_nft_status(
     nft_type: String,
 ) {
     let campaign_id = campaign.id.to_inner();
+    let status = if (status_code == 0) {
+        NFTStatus::Purchased
+    } else if (status_code == 1) {
+        NFTStatus::Listed
+    } else {
+        NFTStatus::Delisted
+    };
     let is_purchased = status == NFTStatus::Purchased;
     let is_listed = status == NFTStatus::Listed;
     let is_delisted = status == NFTStatus::Delisted;
@@ -326,17 +342,34 @@ public fun set_nft_status(
     }
 }
 
-public fun set_nft_status_error(
-    campaign: &mut Campaign,
-    error_type: NFTActionError,
+entry fun set_nft_status_error(
+    campaign: &Campaign,
+    error_type_code: u8,
+    error_message: String,
     _cap: &AdminCap,
 ) {
+    let error_type = if (error_type_code == 0) {
+        NFTActionError::Listing
+    } else if (error_type_code == 1) {
+        NFTActionError::Purchasing
+    } else {
+        NFTActionError::Delisting
+    };
+
     let campaign_id = campaign.id.to_inner();
-    event::emit(NFTActionErrorEvent { campaign_id, error_type });
+    event::emit(NFTActionErrorEvent { campaign_id, error_type, error_message });
 }
 
-public fun create_wallet(campaign: &mut Campaign, address: address, _cap: &AdminCap) {
+public fun create_wallet(
+    campaign: &mut Campaign,
+    address: address,
+    _cap: &AdminCap,
+    ctx: &mut TxContext,
+) {
     df::add(&mut campaign.id, b"wallet", address);
+    let coin = campaign.sui_raised.withdraw_all().into_coin(ctx);
+    transfer::public_transfer(coin, address);
+
     event::emit(WalletAddressSetEvent {
         campaign_id: campaign.id.to_inner(),
         wallet_address: address,

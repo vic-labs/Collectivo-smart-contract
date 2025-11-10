@@ -1256,7 +1256,7 @@ fun test_nft_purchased_status() {
 
         campaign::set_nft_status(
             &mut campaign,
-            campaign::get_nft_status_purchased(),
+            get_purchased_status_code(),
             &admin_cap,
             new_nft_id,
             new_image_url,
@@ -1296,7 +1296,7 @@ fun test_nft_listed_status() {
 
         campaign::set_nft_status(
             &mut campaign,
-            campaign::get_nft_status_listed(),
+            1u8,
             &admin_cap,
             nft_id,
             image_url,
@@ -1337,7 +1337,7 @@ fun test_nft_delisted_status() {
 
         campaign::set_nft_status(
             &mut campaign,
-            campaign::get_nft_status_listed(),
+            1u8,
             &admin_cap,
             nft_id,
             image_url,
@@ -1351,7 +1351,7 @@ fun test_nft_delisted_status() {
         // Then delist it
         campaign::set_nft_status(
             &mut campaign,
-            campaign::get_nft_status_delisted(),
+            get_delisted_status_code(),
             &admin_cap,
             nft_id,
             image_url,
@@ -1386,10 +1386,51 @@ fun test_create_and_get_wallet() {
         let mut campaign = scenario.take_shared<Campaign>();
         let admin_cap = scenario.take_from_address<AdminCap>(admin);
 
-        campaign::create_wallet(&mut campaign, wallet_address, &admin_cap);
+        // Check initial SUI raised amount (should be 500000000 from admin's initial contribution)
+        let initial_sui_raised = campaign.sui_raised().value();
+        assert!(initial_sui_raised == 500000000, EWrongInitialBalance);
+
+        campaign::create_wallet(&mut campaign, wallet_address, &admin_cap, scenario.ctx());
 
         let retrieved_wallet = campaign::get_wallet(&mut campaign);
         assert!(retrieved_wallet == wallet_address, EWalletWrong);
+
+        // Check that all SUI was transferred from campaign (sui_raised should be 0)
+        assert!(campaign.sui_raised().value() == 0, EWrongSuiRaisedAfterWithdrawal);
+
+        scenario.return_to_sender(admin_cap);
+        test_scenario::return_shared(campaign);
+    };
+
+    // Check that wallet address received the transferred SUI
+    scenario.next_tx(wallet_address);
+    {
+        let transferred_coin = scenario.take_from_address<coin::Coin<SUI>>(wallet_address);
+        assert!(transferred_coin.value() == 500000000, EWrongCoinValue);
+        scenario.return_to_sender(transferred_coin);
+    };
+
+    scenario.end();
+}
+
+// === NFT STATUS TESTS === //
+
+#[test]
+fun test_nft_status_error() {
+    let admin = @0xad;
+    let mut scenario = test_scenario::begin(admin);
+
+    issue_admin_cap(scenario.ctx());
+    create_test_campaign(&mut scenario, admin, 100000000);
+
+    scenario.next_tx(admin);
+
+    {
+        let campaign = scenario.take_shared<Campaign>();
+        let admin_cap = scenario.take_from_address<AdminCap>(admin);
+
+        // Test listing error (code 0)
+        campaign::set_nft_status_error(&campaign, 0u8, &admin_cap);
 
         scenario.return_to_sender(admin_cap);
         test_scenario::return_shared(campaign);
@@ -1399,6 +1440,10 @@ fun test_create_and_get_wallet() {
 }
 
 // === HELPER FUNCTIONS === //
+
+// Helper functions for status codes
+fun get_purchased_status_code(): u8 { 0u8 }
+fun get_delisted_status_code(): u8 { 2u8 }
 
 fun create_test_campaign(
     scenario: &mut test_scenario::Scenario,
