@@ -809,7 +809,10 @@ fun test_multiple_partial_withdrawals_maintaining_minimum() {
         campaign::withdraw(&mut campaign, 300000000, scenario.ctx()); // Withdraw 0.3 SUI, leave 400000000
 
         let user_contribution = campaign.get_user_contribution(contributor);
-        assert!(user_contribution.contributor_amount() == 400000000, EWrongUserContributionAfterPartialWithdrawal);
+        assert!(
+            user_contribution.contributor_amount() == 400000000,
+            EWrongUserContributionAfterPartialWithdrawal,
+        );
 
         assert!(campaign.sui_raised().value() == 900000000, EWrongSuiRaisedAfterPartialWithdrawal);
         assert!(campaign.is_contributor(contributor), EUserNotInContributors);
@@ -826,7 +829,10 @@ fun test_multiple_partial_withdrawals_maintaining_minimum() {
         campaign::withdraw(&mut campaign, 200000000, scenario.ctx()); // Withdraw 0.2 SUI, leave 200000000
 
         let user_contribution = campaign.get_user_contribution(contributor);
-        assert!(user_contribution.contributor_amount() == 200000000, EWrongUserContributionAfterPartialWithdrawal);
+        assert!(
+            user_contribution.contributor_amount() == 200000000,
+            EWrongUserContributionAfterPartialWithdrawal,
+        );
 
         assert!(campaign.sui_raised().value() == 700000000, EWrongSuiRaisedAfterPartialWithdrawal);
         assert!(campaign.is_contributor(contributor), EUserNotInContributors);
@@ -843,7 +849,10 @@ fun test_multiple_partial_withdrawals_maintaining_minimum() {
         campaign::withdraw(&mut campaign, 100000000, scenario.ctx()); // Withdraw 0.1 SUI, leave 100000000 (minimum)
 
         let user_contribution = campaign.get_user_contribution(contributor);
-        assert!(user_contribution.contributor_amount() == 100000000, EWrongUserContributionAfterPartialWithdrawal);
+        assert!(
+            user_contribution.contributor_amount() == 100000000,
+            EWrongUserContributionAfterPartialWithdrawal,
+        );
 
         assert!(campaign.sui_raised().value() == 600000000, EWrongSuiRaisedAfterPartialWithdrawal);
         assert!(campaign.is_contributor(contributor), EUserNotInContributors);
@@ -1430,10 +1439,92 @@ fun test_nft_status_error() {
         let admin_cap = scenario.take_from_address<AdminCap>(admin);
 
         // Test listing error (code 0)
-        campaign::set_nft_status_error(&campaign, 0u8, &admin_cap);
+        campaign::set_nft_status_error(
+            &campaign,
+            0u8,
+            b"Test listing error".to_string(),
+            &admin_cap,
+        );
 
         scenario.return_to_sender(admin_cap);
         test_scenario::return_shared(campaign);
+    };
+
+    scenario.end();
+}
+
+#[test]
+fun test_admin_delete_campaign_with_refunds() {
+    let admin = @0xad;
+    let contributor1 = @0xc1;
+    let contributor2 = @0xc2;
+    let mut scenario = test_scenario::begin(admin);
+
+    issue_admin_cap(scenario.ctx());
+    create_test_campaign(&mut scenario, admin, 100000000); // 0.1 SUI
+
+    // Add contributors
+    scenario.next_tx(contributor1);
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let mut test_clock = clock::create_for_testing(scenario.ctx());
+        test_clock.set_for_testing(200000000000);
+
+        // Deposit 202000000 to get 200000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(202000000, scenario.ctx());
+
+        campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
+
+        test_scenario::return_shared(campaign);
+        test_clock.destroy_for_testing();
+    };
+
+    scenario.next_tx(contributor2);
+    {
+        let mut campaign = scenario.take_shared<Campaign>();
+        let mut test_clock = clock::create_for_testing(scenario.ctx());
+        test_clock.set_for_testing(200000000000);
+
+        // Deposit 101000000 to get 100000000 after fee
+        let contribution = coin::mint_for_testing<SUI>(101000000, scenario.ctx());
+
+        campaign::contribute(&mut campaign, contribution, &test_clock, scenario.ctx());
+
+        test_scenario::return_shared(campaign);
+        test_clock.destroy_for_testing();
+    };
+
+    // Admin deletes campaign
+    scenario.next_tx(admin);
+    {
+        let campaign = scenario.take_shared<Campaign>();
+        let admin_cap = scenario.take_from_address<AdminCap>(admin);
+
+        campaign::admin_delete(campaign, &admin_cap, scenario.ctx());
+
+        scenario.return_to_sender(admin_cap);
+    };
+
+    // Check refunds were issued
+    scenario.next_tx(contributor2);
+    {
+        let refund = scenario.take_from_address<coin::Coin<SUI>>(contributor2);
+        assert!(refund.value() == 100000000, EWrongRefundAmount);
+        scenario.return_to_sender(refund);
+    };
+
+    scenario.next_tx(contributor1);
+    {
+        let refund = scenario.take_from_address<coin::Coin<SUI>>(contributor1);
+        assert!(refund.value() == 200000000, EWrongRefundAmount);
+        scenario.return_to_sender(refund);
+    };
+
+    scenario.next_tx(admin);
+    {
+        let refund = scenario.take_from_address<coin::Coin<SUI>>(admin);
+        assert!(refund.value() == 500000000, EWrongRefundAmount);
+        scenario.return_to_sender(refund);
     };
 
     scenario.end();
@@ -1443,6 +1534,7 @@ fun test_nft_status_error() {
 
 // Helper functions for status codes
 fun get_purchased_status_code(): u8 { 0u8 }
+
 fun get_delisted_status_code(): u8 { 2u8 }
 
 fun create_test_campaign(

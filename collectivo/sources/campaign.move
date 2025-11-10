@@ -173,14 +173,18 @@ entry fun admin_delete(campaign: Campaign, _cap: &AdminCap, ctx: &mut TxContext)
 
 fun delete_and_refund(campaign: Campaign, ctx: &mut TxContext) {
     let campaign_id = campaign.id.to_inner();
-    let Campaign { id, user_contributions, mut sui_raised, mut contributors, .. } = campaign;
-    // refund all contributors
-    while (sui_raised.value() > 0) {
-        let contributor = contributors.pop_back();
-        let contributor_info = user_contributions.borrow(contributor);
-        let amount = contributor_info.amount;
-        let sui_coin = sui_raised.split(amount).into_coin(ctx);
-        transfer::public_transfer(sui_coin, contributor);
+    let Campaign { id, user_contributions, mut sui_raised, mut contributors, status, .. } =
+        campaign;
+
+    if (status == CampaignStatus::Active) {
+        // refund all contributors
+        while (sui_raised.value() > 0) {
+            let contributor = contributors.pop_back();
+            let contributor_info = user_contributions.borrow(contributor);
+            let amount = contributor_info.amount;
+            let sui_coin = sui_raised.split(amount).into_coin(ctx);
+            transfer::public_transfer(sui_coin, contributor);
+        };
     };
 
     table::drop(user_contributions);
