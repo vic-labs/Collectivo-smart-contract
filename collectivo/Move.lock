@@ -56,13 +56,13 @@ latest-published-id = "0xe21243f6106858a01d9bafd32e0fc17b7bdbfb73471332c3048b879
 published-version = "1"
 
 [env.devnet]
-chain-id = "eaa01338"
-original-published-id = "0x9cebbab14032cf3a377070bb8f2b5f833f7fdccfcc000c01e5abe8da104230ad"
-latest-published-id = "0x9cebbab14032cf3a377070bb8f2b5f833f7fdccfcc000c01e5abe8da104230ad"
+chain-id = "dac402e1"
+original-published-id = "0xd9d72dabf48cb0f79ba5e229f80fa6746d6431f6fecaeda28b4fc27f94404cd1"
+latest-published-id = "0xd9d72dabf48cb0f79ba5e229f80fa6746d6431f6fecaeda28b4fc27f94404cd1"
 published-version = "1"
 
 [env.mainnet]
 chain-id = "35834a8a"
-original-published-id = "0x9b49f0eacc70f2988905bcb5637ae896481723c6010e196bc5b93dc82d6abee2"
-latest-published-id = "0x9b49f0eacc70f2988905bcb5637ae896481723c6010e196bc5b93dc82d6abee2"
+original-published-id = "0x59868cb34f794185b99b9e70bf6e1713a72d0fd8efabf915c34c624ee05a045c"
+latest-published-id = "0x59868cb34f794185b99b9e70bf6e1713a72d0fd8efabf915c34c624ee05a045c"
 published-version = "1"

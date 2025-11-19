@@ -197,12 +197,10 @@ PURCHASED_NFT_ID="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab
     sui client ptb \
         --assign campaign @${CAMPAIGN_ID} \
         --assign nft_id @${PURCHASED_NFT_ID} \
-        --move-call ${PACKAGE_ID}::campaign::get_nft_status_purchased \
-        --assign status \
         --assign admin_cap @${ADMIN_CAP_ID} \
         --move-call ${PACKAGE_ID}::campaign::set_nft_status \
         campaign \
-        status \
+        0 \
         admin_cap \
         nft_id \
         "'${IMAGE_URL}'" \
@@ -214,9 +212,41 @@ PURCHASED_NFT_ID="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab
 echo -e "${GREEN}✅ NFT marked as purchased${NC}\n"
 wait_for_tx
 
+# === SCENARIO 2.6: SET CAMPAIGN WALLET ADDRESS ===
+echo -e "${GREEN}📋 SCENARIO 2.6: Setting Campaign Wallet Address${NC}"
+echo "----------------------------------------"
+switch_address "$ADDRESS3"  # Switch to festive-carnelian (current admin)
+sui client faucet
+merge_coins
+
+# Use AdminCap from config
+ADMIN_CAP_ID="${DEVNET_ADMIN_CAP}"
+echo -e "${YELLOW}Using AdminCap from config: $ADMIN_CAP_ID${NC}"
+
+# Generate a new wallet address for the campaign
+CAMPAIGN_WALLET_ADDRESS="0x$(printf "%040x" $RANDOM)"
+
+echo -e "${YELLOW}Setting campaign wallet address to: $CAMPAIGN_WALLET_ADDRESS${NC}"
+
+sui client ptb \
+    --assign campaign @${CAMPAIGN_ID} \
+    --assign admin_cap @${ADMIN_CAP_ID} \
+    --move-call ${PACKAGE_ID}::campaign::create_wallet \
+    campaign \
+    @${CAMPAIGN_WALLET_ADDRESS} \
+    admin_cap \
+    --gas-budget 100000000 2>&1 | grep -v "warning\|api version" || true
+
+echo -e "${GREEN}✅ Campaign wallet address set${NC}\n"
+wait_for_tx
+
 # === SCENARIO 3: CREATE PROPOSAL ===
 echo -e "${GREEN}📋 SCENARIO 3: Creating Proposal${NC}"
 echo "----------------------------------------"
+
+switch_address "$ADDRESS1"
+sui client faucet
+merge_coins
 
 # Always create list proposal for demo purposes
 PROPOSAL_TYPE=0
@@ -294,22 +324,21 @@ wait_for_tx
 echo -e "${GREEN}📋 SCENARIO 4: Voting on Proposal${NC}"
 echo "----------------------------------------"
 
-# Address 1 (creator, 50% weight) votes Approval
-switch_address "$ADDRESS1"
+# Address 1 (creator, 50% weight) automatically votes Approval on creation
+echo -e "${YELLOW}Address 1 (Creator) has automatically approved (50% weight)${NC}"
+echo ""
+
+
+# Address 3 votes Rejection
+switch_address "$ADDRESS3"
 sui client faucet
 merge_coins
-
-if [ -z "$PROPOSAL_ID" ] || [ -z "$CAMPAIGN_ID" ]; then
-    echo -e "${RED}❌ Missing proposal or campaign ID${NC}"
-    exit 1
-fi
-
-echo -e "${YELLOW}Address 1 (50% weight) voting: Approval${NC}"
+echo -e "${YELLOW}Address 3 voting: Rejection${NC}"
 sui client ptb \
     --assign proposal @"${PROPOSAL_ID}" \
     --assign campaign @"${CAMPAIGN_ID}" \
     --assign clock @0x6 \
-    --move-call "${PACKAGE_ID}"::proposal::new_approval_vote_type \
+    --move-call "${PACKAGE_ID}"::proposal::new_rejection_vote_type \
     --assign vote_type \
     --move-call "${PACKAGE_ID}"::proposal::vote \
     proposal \
@@ -317,8 +346,7 @@ sui client ptb \
     vote_type \
     clock --gas-budget 100000000 2>&1 | grep -v "warning\|api version" || true
 
-echo -e "${GREEN}✅ Approval vote cast (50% weight)${NC}"
-echo ""
+echo -e "${GREEN}✅ Rejection vote cast${NC}\n"
 wait_for_tx
 
 # Address 2 votes Approval (adds more weight)
@@ -339,26 +367,6 @@ sui client ptb \
     clock --gas-budget 100000000 2>&1 | grep -v "warning\|api version" || true
 
 echo -e "${GREEN}✅ Approval vote cast${NC}\n"
-wait_for_tx
-
-# Address 3 votes Rejection
-switch_address "$ADDRESS3"
-sui client faucet
-merge_coins
-echo -e "${YELLOW}Address 3 voting: Rejection${NC}"
-sui client ptb \
-    --assign proposal @"${PROPOSAL_ID}" \
-    --assign campaign @"${CAMPAIGN_ID}" \
-    --assign clock @0x6 \
-    --move-call "${PACKAGE_ID}"::proposal::new_rejection_vote_type \
-    --assign vote_type \
-    --move-call "${PACKAGE_ID}"::proposal::vote \
-    proposal \
-    campaign \
-    vote_type \
-    clock --gas-budget 100000000 2>&1 | grep -v "warning\|api version" || true
-
-echo -e "${GREEN}✅ Rejection vote cast${NC}\n"
 wait_for_tx
 
 # === SUMMARY ===

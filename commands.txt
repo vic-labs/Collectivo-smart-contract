@@ -52,8 +52,8 @@ clock
 # === DELETE A CAMPAIGN ===
 
 sui client ptb \
---assign campaign @0x68920f2dee7fabeca5b305a0e33b33113e5783cef546b93cc181ccdbbb9f8b52 \
---assign admin_cap @0x8f6da3770867fddac400f09d40ba19d262d072e1ac0e7f4504516dfcf6e8c7b5 \
---move-call 0x9b49f0eacc70f2988905bcb5637ae896481723c6010e196bc5b93dc82d6abee2::campaign::admin_delete \
+--assign campaign @0x30024253c8f56685118bbccb2284e503fd3a7defa6cf9ed1938f5bd7984623b3 \
+--assign admin_cap @0x6447971c41d192c0c1e3edea2c6deef3baa873ba5e4b010df299434b89302258 \
+--move-call 0x59868cb34f794185b99b9e70bf6e1713a72d0fd8efabf915c34c624ee05a045c::campaign::admin_delete \
 campaign \
 admin_cap
