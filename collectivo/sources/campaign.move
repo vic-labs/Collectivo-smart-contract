@@ -453,7 +453,7 @@ public(package) fun get_voting_weight(self: &Campaign, user: address): u64 {
     let user_contribution = self.user_contributions.borrow(user).amount;
 
     // Calculate weight: (contribution * 100) / target
-    // Multiply first to maintain precision
+    // Multiply first to maintain precision !
     (user_contribution * 100) / self.target
 }
 
