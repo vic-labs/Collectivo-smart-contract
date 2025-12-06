@@ -14,6 +14,7 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 # Addresses
+ADDRESS0="collectivo-deployer"  # Primary admin wallet
 ADDRESS1="walrus-deployer"
 ADDRESS2="festive-malachite"
 ADDRESS3="festive-carnelian"
@@ -65,22 +66,22 @@ CREATOR_CONTRIBUTION_SUI=1.0
 CREATOR_DEPOSIT_MIST=$(echo "$CREATOR_CONTRIBUTION_SUI * 1010000000 / 1" | bc)
 
 # Generate random NFT name and rank
-NFT_NAMES=("suimilos" "prime machin" "popkins")
+NFT_NAMES=("Suimilos" "Prime Machin" "Popkins")
 RANDOM_INDEX=$((RANDOM % ${#NFT_NAMES[@]}))
 SELECTED_NAME="${NFT_NAMES[$RANDOM_INDEX]}"
 RANDOM_NUMBER=$((RANDOM % 99999 + 1))
-NFT_NAME="${SELECTED_NAME}#${RANDOM_NUMBER}"
+NFT_NAME="${SELECTED_NAME} #${RANDOM_NUMBER}"
 RANDOM_RANK=$((RANDOM % 1000 + 1))
 
 # Map NFT names to their types
 case "$SELECTED_NAME" in
-    "suimilos")
+    "Suimilos")
         NFT_TYPE="'0xbc3df36be17f27ac98e3c839b2589db8475fa07b20657b08e8891e3aaf5ee5f9::suimilos::Suimilos'"
         ;;
-    "prime machin")
+    "Prime Machin")
         NFT_TYPE="'0xbc3df36be17f27ac98e3c839b2589db8475fa07b20657b08e8891e3aaf5ee5f9::prime_machin::PrimeMachin'"
         ;;
-    "popkins")
+    "Popkins")
         NFT_TYPE="'0xbc3df36be17f27ac98e3c839b2589db8475fa07b20657b08e8891e3aaf5ee5f9::popkins::Popkins'"
         ;;
 esac
@@ -183,7 +184,7 @@ wait_for_tx
 # === SCENARIO 2.5: MARK NFT AS PURCHASED ===
 echo -e "${GREEN}📋 SCENARIO 2.5: Marking NFT as Purchased${NC}"
 echo "----------------------------------------"
-switch_address "$ADDRESS3"  # Switch to festive-carnelian (current admin)
+switch_address "$ADDRESS0"  # Switch to collectivo-deployer (admin)
 sui client faucet
 merge_coins
 
@@ -215,7 +216,7 @@ wait_for_tx
 # === SCENARIO 2.6: SET CAMPAIGN WALLET ADDRESS ===
 echo -e "${GREEN}📋 SCENARIO 2.6: Setting Campaign Wallet Address${NC}"
 echo "----------------------------------------"
-switch_address "$ADDRESS3"  # Switch to festive-carnelian (current admin)
+switch_address "$ADDRESS0"  # Switch to collectivo-deployer (admin)
 sui client faucet
 merge_coins
 

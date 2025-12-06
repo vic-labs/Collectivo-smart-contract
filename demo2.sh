@@ -14,10 +14,11 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 # Addresses
+ADDRESS0="collectivo-deployer"  # Primary admin wallet
 ADDRESS1="walrus-deployer"
 ADDRESS2="festive-malachite"
 ADDRESS3="festive-carnelian"
-ADDRESSES=("$ADDRESS1" "$ADDRESS2" "$ADDRESS3")
+ADDRESSES=("$ADDRESS0" "$ADDRESS1" "$ADDRESS2" "$ADDRESS3")
 
 # Helper function to switch address
 switch_address() {
@@ -46,7 +47,7 @@ echo -e "${GREEN}🚀 Starting Collectivo 100 Campaigns Demo Script${NC}\n"
 echo "=========================================="
 
 # NFT collections data
-NFT_NAMES=("suimilos" "prime machin" "popkins")
+NFT_NAMES=("Suimilos" "Prime Machin" "Popkins")
 NFT_TYPES=(
     "'0xbc3df36be17f27ac98e3c839b2589db8475fa07b20657b08e8891e3aaf5ee5f9::suimilos::Suimilos'"
     "'0xbc3df36be17f27ac98e3c839b2589db8475fa07b20657b08e8891e3aaf5ee5f9::prime_machin::PrimeMachin'"
@@ -94,7 +95,7 @@ for i in {1..100}; do
     RANDOM_INDEX=$((RANDOM % ${#NFT_NAMES[@]}))
     SELECTED_NAME="${NFT_NAMES[$RANDOM_INDEX]}"
     RANDOM_NUMBER=$((RANDOM % 99999 + 1))
-    NFT_NAME="${SELECTED_NAME}#${RANDOM_NUMBER}"
+    NFT_NAME="${SELECTED_NAME} #${RANDOM_NUMBER}"
     RANDOM_RANK=$((RANDOM % 1000 + 1))
     NFT_TYPE="${NFT_TYPES[$RANDOM_INDEX]}"
     
